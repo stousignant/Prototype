@@ -16,15 +16,17 @@ APrototypeGameMode::APrototypeGameMode(const FObjectInitializer& ObjectInitializ
 	HUDClass = APrototypeHUD::StaticClass();
 
     // Set the default values 
+    ExplosionMax = 3.0f;
     EnergyCount = 0.0f;
+    ExplosionCount = 0.0f;
 }
 
 void APrototypeGameMode::Tick(float DeltaSeconds)
 {
     APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
 
-    // If the character still has power
-    /*if (MyCharacter-> == 0.f)
+    // If the number of explosions has not meet the maximum
+    if (ExplosionCount < ExplosionMax)
     {
         // Decrease the character's power
         //MyCharacter->PowerLevel = FMath::FInterpTo(MyCharacter->PowerLevel, 0.f, DeltaSeconds, DecayRate);
@@ -32,7 +34,7 @@ void APrototypeGameMode::Tick(float DeltaSeconds)
     else
     {
         SetCurrentState(EPrototypePlayState::EGameOver);
-    }*/
+    }
 }
 
 void APrototypeGameMode::SetCurrentState(EPrototypePlayState NewState)
@@ -61,7 +63,7 @@ void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
             Volume->DisableSpawning();
         }
         APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
-        PlayerController->SetCinematicMode(true, true, true);
+        PlayerController->SetCinematicMode(true, true, false);
     }
     break;
     // 

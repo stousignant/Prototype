@@ -1,6 +1,7 @@
 // Copyright 1998-2014 Epic Games, Inc. All Rights Reserved.
 #pragma once 
 #include "GameFramework/HUD.h"
+#include "PrototypeGameMode.h"
 #include "PrototypeHUD.generated.h"
 
 UCLASS()
@@ -15,6 +16,9 @@ public:
     /** Variable for storing the font */
     UPROPERTY()
     UFont* HUDFont;
+
+    /** Game mode */
+    APrototypeGameMode* MyGameMode;
 
     /** Screen dimensions */
     FVector2D ScreenDimensions;
@@ -37,8 +41,8 @@ public:
     /** Draw the scan UI */
     void DrawScan();
 
-    /** Draw the game state */
-    void DrawGameState();
+    /** Draw the game over state */
+    void DrawGameOver();
 
     /** Scanning progress value */
     float ScanProgress;

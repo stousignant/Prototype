@@ -27,4 +27,11 @@ public:
     // Override the OnPickedUp function
     void OnPickedUp_Implementation() override;
 	
+    // Happens when the energy hit the deathfloor
+    void Explode();
+
+    /** Explosion particle effect */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Particle)
+    UParticleSystem* ExplosionEffect;
+
 };

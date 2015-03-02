@@ -21,13 +21,20 @@ public:
     // Constructor
     APrototypeGameMode(const FObjectInitializer& ObjectInitializer);
 
+    //////////////////////////////////////////////////////////////////////////
+    // Update
+    /** Tick */
     virtual void Tick(float DeltaSeconds) override;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
-    float DecayRate;
+    /** Number of explosions before the game ends */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = GameMode)
+    float ExplosionMax;
 
     /** Amount of energy scanned by the player */
     float EnergyCount;
+
+    /** Amount of energy exploded by hitting the deathfloor */
+    float ExplosionCount;
 
     EPrototypePlayState GetCurrentState() const;
     void SetCurrentState(EPrototypePlayState NewState);

@@ -32,7 +32,7 @@ void ADeathFloor::Tick(float DeltaSeconds)
         // if the cast is successful, and the energy is valid and active
         if (TestEnergy && !TestEnergy->IsPendingKill() && TestEnergy->bIsActive)
         {
-            TestEnergy->Destroy();
+            TestEnergy->Explode();
         }
 
         // * PLAYER *

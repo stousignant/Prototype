@@ -23,12 +23,26 @@ void AEnergyPickup::OnPickedUp_Implementation()
     // Call the parent implementation of OnPickedUp first
     Super::OnPickedUp_Implementation();
 
-    // Destroy the battery
+    // Destroy the energy
     Destroy();
 
     // Increment the energy counter
     APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-    MyGameMode->EnergyCount++;
+    MyGameMode->EnergyCount++;   
+
+    // TODO :: EXPLOSION
+    // Show particle effect
+    //ExplosionEffect->
+}
+
+void AEnergyPickup::Explode()
+{
+    // Destroy the energy
+    Destroy();
+
+    // Increment the missed energy counter
+    APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+    MyGameMode->ExplosionCount++;    
 }
 
 

@@ -15,6 +15,7 @@ ASpawnVolume::ASpawnVolume(const FObjectInitializer& ObjectInitializer) : Super(
     SpawnDelayRangeLow = 5.0f;
     SpawnDelayRangeHigh = 5.0f;
     SpawnDelay = GetRandomSpawnDelay();
+    SpawnTime = SpawnDelayRangeHigh; // Start spawning immediately
 
     // Set the default speed level for the spawning objects
     SpawnedSpeedLevel = 5.0f;

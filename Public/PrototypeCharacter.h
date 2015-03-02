@@ -212,7 +212,12 @@ public:
     /** Player pressed upgrade power 3 action */
     void OnUpgradePower3Pressed();
 
-    
+    /** Player pressed the exit game key */
+    void OnExitGamePressed();
+
+    /** Player pressed the restart game key */
+    void OnRestartGamePressed();
+
     
     //////////////////////////////////////////////////////////////////////////
     // Base Movement Override

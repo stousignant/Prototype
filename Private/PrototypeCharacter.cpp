@@ -246,11 +246,13 @@ void APrototypeCharacter::UpdateScan()
     GetActorEyesViewPoint(AimStart, AimRotation);
     FVector AimEnd = AimStart + AimRotation.Vector() * ScanDistance;
 
+    ULineBatchComponent* const LineBatcher = GetWorld()->ForegroundLineBatcher;
+
     // Trace the line for scan
-    DrawDebugLine(GetWorld(), AimStart + AimRotation.Vector().UpVector * ScanOffset1 + GetActorRightVector() * ScanOffset1, AimEnd + AimRotation.Vector().UpVector * ScanOffset2 + GetActorRightVector() * ScanOffset2, FColor::Cyan); // Top right
-    DrawDebugLine(GetWorld(), AimStart - AimRotation.Vector().UpVector * ScanOffset1 + GetActorRightVector() * ScanOffset1, AimEnd - AimRotation.Vector().UpVector * ScanOffset2 + GetActorRightVector() * ScanOffset2, FColor::Cyan); // Bottom right
-    DrawDebugLine(GetWorld(), AimStart - AimRotation.Vector().UpVector * ScanOffset1 - GetActorRightVector() * ScanOffset1, AimEnd - AimRotation.Vector().UpVector * ScanOffset2 - GetActorRightVector() * ScanOffset2, FColor::Cyan); // Bottom left
-    DrawDebugLine(GetWorld(), AimStart + AimRotation.Vector().UpVector * ScanOffset1 - GetActorRightVector() * ScanOffset1, AimEnd + AimRotation.Vector().UpVector * ScanOffset2 - GetActorRightVector() * ScanOffset2, FColor::Cyan); // Top left
+    LineBatcher->DrawLine(AimStart + AimRotation.Vector().UpVector * ScanOffset1 + GetActorRightVector() * ScanOffset1, AimEnd + AimRotation.Vector().UpVector * ScanOffset2 + GetActorRightVector() * ScanOffset2, FColor::Cyan, 128, 10.0f, 1.0f); // Top right
+    LineBatcher->DrawLine(AimStart - AimRotation.Vector().UpVector * ScanOffset1 + GetActorRightVector() * ScanOffset1, AimEnd - AimRotation.Vector().UpVector * ScanOffset2 + GetActorRightVector() * ScanOffset2, FColor::Cyan, 128, 10.0f, 1.0f); // Bottom right
+    LineBatcher->DrawLine(AimStart - AimRotation.Vector().UpVector * ScanOffset1 - GetActorRightVector() * ScanOffset1, AimEnd - AimRotation.Vector().UpVector * ScanOffset2 - GetActorRightVector() * ScanOffset2, FColor::Cyan, 128, 10.0f, 1.0f); // Bottom left
+    LineBatcher->DrawLine(AimStart + AimRotation.Vector().UpVector * ScanOffset1 - GetActorRightVector() * ScanOffset1, AimEnd + AimRotation.Vector().UpVector * ScanOffset2 - GetActorRightVector() * ScanOffset2, FColor::Cyan, 128, 10.0f, 1.0f); // Top left
 
     // Set the params for the raycast
     FHitResult testHitResult(ForceInit);
@@ -325,6 +327,9 @@ void APrototypeCharacter::SetupPlayerInputComponent(class UInputComponent* Input
     InputComponent->BindAction("UpgradePower1", IE_Pressed, this, &APrototypeCharacter::OnUpgradePower1Pressed);
     InputComponent->BindAction("UpgradePower2", IE_Pressed, this, &APrototypeCharacter::OnUpgradePower2Pressed);
     InputComponent->BindAction("UpgradePower3", IE_Pressed, this, &APrototypeCharacter::OnUpgradePower3Pressed);
+
+    InputComponent->BindAction("ExitGame", IE_Pressed, this, &APrototypeCharacter::OnExitGamePressed);
+    InputComponent->BindAction("RestartGame", IE_Pressed, this, &APrototypeCharacter::OnRestartGamePressed);
 	
 	InputComponent->BindAxis("MoveForward", this, &APrototypeCharacter::OnMoveForward);
 	InputComponent->BindAxis("MoveRight", this, &APrototypeCharacter::OnMoveRight);
@@ -615,6 +620,16 @@ void APrototypeCharacter::UpgradePower(float &PowerId)
         // Play upgrade sound
         UGameplayStatics::PlaySoundAtLocation(this, PowerUpgradeSound, GetActorLocation());
     }
+}
+
+void APrototypeCharacter::OnExitGamePressed()
+{
+    GetWorld()->GetFirstPlayerController()->ConsoleCommand("quit");
+}
+
+void APrototypeCharacter::OnRestartGamePressed()
+{
+    GetWorld()->GetFirstPlayerController()->ConsoleCommand("restartlevel");
 }
 
 

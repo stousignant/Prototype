@@ -2,7 +2,6 @@
 
 #include "Prototype.h"
 #include "PrototypeHUD.h"
-#include "PrototypeGameMode.h"
 #include "PrototypeCharacter.h"
 #include "TextureResource.h"
 #include "CanvasItem.h"
@@ -29,19 +28,26 @@ void APrototypeHUD::DrawHUD()
 
     // Get the screen dimensions
     ScreenDimensions = FVector2D(Canvas->SizeX, Canvas->SizeY);
-    
-    DrawPlayerInfo();
 
-    DrawPlayerPowers();
+    // If the game is over 
+    MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(this));
+    if (MyGameMode->GetCurrentState() == EPrototypePlayState::EGameOver)
+    {
+        DrawGameOver();
+    }
+    // Else render the game UI
+    else
+    {
+        DrawPlayerInfo();
 
-    DrawGameInfo();
+        DrawPlayerPowers();
 
-    //DrawCrosshair();
+        DrawGameInfo();
 
-    DrawScan();
-    
-    DrawGameState();
-    
+        //DrawCrosshair();
+
+        DrawScan();
+    }       
 }
 
 void APrototypeHUD::DrawPlayerInfo()
@@ -122,6 +128,12 @@ void APrototypeHUD::DrawGameInfo()
     FVector2D EnergyCountStringSize;
     GetTextSize(EnergyCountString, EnergyCountStringSize.X, EnergyCountStringSize.Y, HUDFont);
     DrawText(EnergyCountString, FColor::Yellow, (ScreenDimensions.X / 1.6f), (ScreenDimensions.Y / 3.0f), HUDFont);
+
+    // Print the explosion count
+    FString ExplosionCountString = FString::Printf(TEXT("%0.0f/%0.0f Explosion"), MyGameMode->ExplosionCount, MyGameMode->ExplosionMax);
+    FVector2D ExplosionCountStringSize;
+    GetTextSize(ExplosionCountString, ExplosionCountStringSize.X, ExplosionCountStringSize.Y, HUDFont);
+    DrawText(ExplosionCountString, FColor::Red, (ScreenDimensions.X / 1.6f), (ScreenDimensions.Y / 3.0f) + EnergyCountStringSize.Y, HUDFont);
 }
 
 void APrototypeHUD::DrawCrosshair()
@@ -156,16 +168,28 @@ void APrototypeHUD::DrawScan()
     }    
 }
 
-void APrototypeHUD::DrawGameState()
+void APrototypeHUD::DrawGameOver()
 {
-    // If the game is over 
-    APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(this));
-    if (MyGameMode->GetCurrentState() == EPrototypePlayState::EGameOver)
-    {
-        // Create a variable for storing the size of printing Game Over
-        FVector2D GameOverSize;
-        GetTextSize(TEXT("GAME OVER"), GameOverSize.X, GameOverSize.Y, HUDFont);
-        DrawText(TEXT("GAME OVER"), FColor::White, (ScreenDimensions.X - GameOverSize.X) / 2.0f, (ScreenDimensions.Y - GameOverSize.Y) / 2.0f, HUDFont);
-    }
+    // Print the Game over text
+    FVector2D GameOverSize;
+    GetTextSize(TEXT("GAME OVER"), GameOverSize.X, GameOverSize.Y, HUDFont);
+    DrawText(TEXT("GAME OVER"), FColor::White, (ScreenDimensions.X - GameOverSize.X) / 2.0f, (ScreenDimensions.Y - GameOverSize.Y) / 2.0f, HUDFont);
+
+    // Print the highscore
+    FString HighscoreString = FString::Printf(TEXT("Your highscore is %0.0f"), MyGameMode->EnergyCount);
+    FVector2D HighscoreStringSize;
+    GetTextSize(HighscoreString, HighscoreStringSize.X, HighscoreStringSize.Y, HUDFont);
+    DrawText(HighscoreString, FColor::Yellow, (ScreenDimensions.X - HighscoreStringSize.X) / 2.0f, (ScreenDimensions.Y - HighscoreStringSize.Y) / 2.0f + GameOverSize.Y, HUDFont);
+
+    // Print the options
+    FString RestartString = FString::Printf(TEXT("Restart (backspace)"));
+    FVector2D RestartStringSize;
+    GetTextSize(RestartString, RestartStringSize.X, RestartStringSize.Y, HUDFont);
+    DrawText(RestartString, FColor::Blue, (ScreenDimensions.X - RestartStringSize.X) / 2.0f, (ScreenDimensions.Y - RestartStringSize.Y) / 2.0f + GameOverSize.Y + HighscoreStringSize.Y, HUDFont);
+
+    FString ExitString = FString::Printf(TEXT("Exit (escape)"));
+    FVector2D ExitStringSize;
+    GetTextSize(ExitString, ExitStringSize.X, ExitStringSize.Y, HUDFont);
+    DrawText(ExitString, FColor::Blue, (ScreenDimensions.X - ExitStringSize.X) / 2.0f, (ScreenDimensions.Y - ExitStringSize.Y) / 2.0f + GameOverSize.Y + HighscoreStringSize.Y + RestartStringSize.Y, HUDFont);
 }
 
