@@ -34,4 +34,8 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Particle)
     UParticleSystem* ExplosionEffect;
 
+    /** Sound to play when destroyed */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
+    class USoundBase* ExplosionSound;
+
 };

@@ -238,7 +238,13 @@ void APrototypeCharacter::UpdateRespawnPoint()
 void APrototypeCharacter::UpdateScan()
 {
     // Skip the scan update if player isn't pressing the scan input
-    if (!bWantsToScan) return;
+    if (!bWantsToScan)
+    {
+        // Reset scan variables
+        bIsScanning = false;
+        ScanProgress = 0;
+        return;
+    }
 
     // Get the aim starting and ending positions
     FVector AimStart;
