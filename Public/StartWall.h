@@ -1,25 +1,25 @@
 #pragma once
 
 #include "GameFramework/Actor.h"
-#include "DeathFloor.generated.h"
+#include "StartWall.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class PROTOTYPE_API ADeathFloor : public AActor
+class PROTOTYPE_API AStartWall : public AActor
 {
 	GENERATED_BODY()
 
 public:
     // Constructor
-    ADeathFloor(const FObjectInitializer& ObjectInitializer);
-	
+    AStartWall(const FObjectInitializer& ObjectInitializer);
+
     // Update
     virtual void Tick(float DeltaSeconds) override;
 
-    /** BoxComponent to specify the death area */
+    /** BoxComponent to specify the start area */
     UPROPERTY(VisibleInstanceOnly, Category = Gameplay)
-    UBoxComponent* DeathFloorCollider;
-	
+    UBoxComponent* StartWallCollider;	
+
 };

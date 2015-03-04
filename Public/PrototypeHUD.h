@@ -35,9 +35,6 @@ public:
     /** Draw the game information such as objectives, etc */
     void DrawGameInfo();
     
-    /** Draw a simple crosshair */
-    void DrawCrosshair();
-
     /** Draw the scan UI */
     void DrawScan();
 
@@ -46,10 +43,6 @@ public:
 
     /** Scanning progress value */
     float ScanProgress;
-
-private:
-    /** Crosshair asset pointer */
-    class UTexture2D* CrosshairTex;
 
 };
 

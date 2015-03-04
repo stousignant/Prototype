@@ -41,9 +41,7 @@ public:
 
     virtual void Tick(float DeltaSeconds) override;
 
-    void EnableSpawning();
-
-    void DisableSpawning();
+    void ToggleSpawning(bool Toggle);
 
 
 private:

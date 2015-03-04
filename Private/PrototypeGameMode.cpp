@@ -1,9 +1,8 @@
-// Copyright 1998-2014 Epic Games, Inc. All Rights Reserved.
-
 #include "Prototype.h"
 #include "PrototypeGameMode.h"
 #include "PrototypeHUD.h"
 #include "PrototypeCharacter.h"
+#include "MusicPlayer.h"
 #include "Kismet/GameplayStatics.h"
 
 APrototypeGameMode::APrototypeGameMode(const FObjectInitializer& ObjectInitializer)	: Super(ObjectInitializer)
@@ -11,7 +10,7 @@ APrototypeGameMode::APrototypeGameMode(const FObjectInitializer& ObjectInitializ
 	// Set default pawn class to our Blueprinted character
 	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnClassFinder(TEXT("/Game/Blueprints/MyCharacter"));
 	DefaultPawnClass = PlayerPawnClassFinder.Class;
-
+    
 	// Use our custom HUD class
 	HUDClass = APrototypeHUD::StaticClass();
 
@@ -39,38 +38,65 @@ void APrototypeGameMode::Tick(float DeltaSeconds)
 
 void APrototypeGameMode::SetCurrentState(EPrototypePlayState NewState)
 {
-    CurrentState = NewState;
-
-    HandleNewState(NewState);
+    // Only apply the changes if needed
+    if (CurrentState != NewState)
+    {
+        CurrentState = NewState;
+        HandleNewState(NewState);
+    }
 }
 
 void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
 {
     switch (NewState)
     {
+    // When launching the game
+    case EPrototypePlayState::ETutorial:
+    {
+        // Do nothing
+    }
+    break;
     // When we're playing, the spawn volumes can spawn
     case EPrototypePlayState::EPlaying:
-        for (ASpawnVolume* Volume : SpawnVolumeActors)
-        {
-            Volume->EnableSpawning();
-        }
-        break;
+    {
+        ToggleSpawnVolumes(true);
+    }
+    break;
     // If the game is over, the spawn volumes should deactivate
     case EPrototypePlayState::EGameOver:
     {
-        for (ASpawnVolume* Volume : SpawnVolumeActors)
-        {
-            Volume->DisableSpawning();
-        }
+        ToggleSpawnVolumes(false);
+
         APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
         PlayerController->SetCinematicMode(true, true, false);
     }
     break;
     // 
     case EPrototypePlayState::EUnknown:
+    {
+        // Do nothing
+    }
+    break;
     default:
-        // do nothing
-        break;
+    {
+        // Do nothing
+    }
+    break;
+    }
+
+    // Play music related to the play state
+    // Find the music player actor
+    TArray<AActor*> FoundMusicPlayerActors;
+
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMusicPlayer::StaticClass(), FoundMusicPlayerActors);
+
+    for (auto Actor : FoundMusicPlayerActors)
+    {
+        AMusicPlayer* MusicPlayerActor = Cast<AMusicPlayer>(Actor);
+        if (MusicPlayerActor)
+        {
+            MusicPlayerActor->PlayMusic(NewState);
+        }
     }
 }
 
@@ -78,33 +104,23 @@ void APrototypeGameMode::BeginPlay()
 {
     Super::BeginPlay();
 
+    SetCurrentState(EPrototypePlayState::ETutorial);
+}
+
+void APrototypeGameMode::ToggleSpawnVolumes(bool Toggle)
+{
     // Find all spawn volume actors
     TArray<AActor*> FoundSpawnVolumeActors;
 
     UGameplayStatics::GetAllActorsOfClass(GetWorld(), ASpawnVolume::StaticClass(), FoundSpawnVolumeActors);
 
+    // Enable spawning for each spawn volume
     for (auto Actor : FoundSpawnVolumeActors)
     {
         ASpawnVolume* SpawnVolumeActor = Cast<ASpawnVolume>(Actor);
         if (SpawnVolumeActor)
         {
-            SpawnVolumeActors.Add(SpawnVolumeActor);
+            SpawnVolumeActor->ToggleSpawning(Toggle);            
         }
     }
-
-    // Find all death floor actors
-    TArray<AActor*> FoundDeathFloorActors;
-
-    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADeathFloor::StaticClass(), FoundDeathFloorActors);
-
-    for (auto Actor : FoundDeathFloorActors)
-    {
-        ADeathFloor* DeathFloorActor = Cast<ADeathFloor>(Actor);
-        if (DeathFloorActor)
-        {
-            DeathFloorActors.Add(DeathFloorActor);
-        }
-    }
-
-    SetCurrentState(EPrototypePlayState::EPlaying);
 }

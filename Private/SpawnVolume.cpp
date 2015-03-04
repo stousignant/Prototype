@@ -122,14 +122,9 @@ void ASpawnVolume::Tick(float DeltaSeconds)
     }
 }
 
-void ASpawnVolume::EnableSpawning()
+void ASpawnVolume::ToggleSpawning(bool Toggle)
 {
-    bSpawningEnabled = true;
-}
-
-void ASpawnVolume::DisableSpawning()
-{
-    bSpawningEnabled = false;
+    bSpawningEnabled = Toggle;
 }
 
 

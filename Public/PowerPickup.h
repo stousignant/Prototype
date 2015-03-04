@@ -24,9 +24,9 @@ public:
     void OnPickedUp_Implementation() override;
 
     /** Override the ReceiveHit function */
-    virtual void ReceiveHit(class UPrimitiveComponent * MyComp,
-                            AActor * Other,
-                            class UPrimitiveComponent * OtherComp,
+    virtual void ReceiveHit(class UPrimitiveComponent* MyComp,
+                            AActor* Other,
+                            class UPrimitiveComponent* OtherComp,
                             bool bSelfMoved,
                             FVector HitLocation,
                             FVector HitNormal,

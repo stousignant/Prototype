@@ -31,9 +31,9 @@ void APowerPickup::OnPickedUp_Implementation()
 }
 
 void APowerPickup::ReceiveHit(
-    class UPrimitiveComponent * MyComp,
-    AActor * Other,
-    class UPrimitiveComponent * OtherComp,
+    class UPrimitiveComponent* MyComp,
+    AActor* Other,
+    class UPrimitiveComponent* OtherComp,
     bool bSelfMoved,
     FVector HitLocation,
     FVector HitNormal,

@@ -1,5 +1,3 @@
-// Copyright 1998-2014 Epic Games, Inc. All Rights Reserved.
-
 #include "Prototype.h"
 #include "PrototypeCharacter.h"
 #include "PrototypeProjectile.h"
@@ -37,11 +35,12 @@ APrototypeCharacter::APrototypeCharacter(const FObjectInitializer& ObjectInitial
     bIsWallRiding = false;
     bMovementBlocked = false;
     bIsFast = false;
+    StaminaMax = 100.0f;
     StaminaCurrent = StaminaMax;
 
     // Set default power values
     RunSpeed = 1500.0f;
-    CharacterMovement->JumpZVelocity = 1500.0f;
+    GetCharacterMovement()->JumpZVelocity = 1500.0f;
     StaminaDrain = 1.0f;
     
     // Set scan variables
@@ -586,15 +585,15 @@ void APrototypeCharacter::OnUpgradePower2Pressed()
 
     if (JumpPowerLevel == 2)
     {
-        CharacterMovement->JumpZVelocity = 2250.0f;
+        GetCharacterMovement()->JumpZVelocity = 2250.0f;
     }
     else if (JumpPowerLevel == 3)
     {
-        CharacterMovement->JumpZVelocity = 3000.0f;
+        GetCharacterMovement()->JumpZVelocity = 3000.0f;
     }
     else if (JumpPowerLevel == 4)
     {
-        CharacterMovement->JumpZVelocity = 3750.0f;
+        GetCharacterMovement()->JumpZVelocity = 3750.0f;
     }
 }
 
@@ -764,41 +763,9 @@ void APrototypeCharacter::UpdateWallRideSounds(bool bNewIsWallRiding)
 
 
 //////////////////////////////////////////////////////////////////////////
-// Power
-/*void APrototypeCharacter::CollectPowerup()
-{
-    // Get all overlapping Actors and store them in a CollectedActors array
-    TArray<AActor*> CollectedActors;
-    CollectionSphere->GetOverlappingActors(CollectedActors);
-
-    // For each actor collected
-    for (int32 iCollected = 0; iCollected < CollectedActors.Num(); ++iCollected)
-    {
-        // Cast the collected actor to APowerPickup
-        APowerPickup* const TestPowerup = Cast<APowerPickup>(CollectedActors[iCollected]);
-
-        // if the cast is successful, and the power up is valid and active
-        if (TestPowerup && !TestPowerup->IsPendingKill() && TestPowerup->bIsActive)
-        {
-            // Call the battery's OnPickedUp function
-            TestPowerup->OnPickedUp();
-
-            // Deactivate the battery
-            TestPowerup->bIsActive = false;
-
-            // Add a stat to the player
-            StatsCount++;
-        }
-    }
-}*/
-
-
-//////////////////////////////////////////////////////////////////////////
 // Spawning
 void APrototypeCharacter::Die()
 {
-    // TODO :: Fade in/out to white
-
     // Set death state to true
     bIsDead = true;
 

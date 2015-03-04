@@ -14,10 +14,6 @@ APrototypeHUD::APrototypeHUD(const FObjectInitializer& ObjectInitializer) : Supe
     // Use the RobotoDistanceField font from the engine
     static ConstructorHelpers::FObjectFinder<UFont>HUDFontOb(TEXT("/Engine/EngineFonts/RobotoDistanceField"));
     HUDFont = HUDFontOb.Object;
-
-    // Set the crosshair texture
-    static ConstructorHelpers::FObjectFinder<UTexture2D> CrosshairTexObj(TEXT("/Game/Textures/Crosshair"));
-    CrosshairTex = CrosshairTexObj.Object;
 }
 
 
@@ -43,9 +39,7 @@ void APrototypeHUD::DrawHUD()
         DrawPlayerPowers();
 
         DrawGameInfo();
-
-        //DrawCrosshair();
-
+        
         DrawScan();
     }       
 }
@@ -75,7 +69,7 @@ void APrototypeHUD::DrawPlayerInfo()
 
     if (MyCharacter->bIsDead)
     {
-        FString RespawnString = FString::Printf(TEXT("Rebooting"));
+        FString RespawnString = FString::Printf(TEXT("Respawning"));
         FVector2D RespawnStringSize;
         GetTextSize(RespawnString, RespawnStringSize.X, RespawnStringSize.Y, HUDFont);
         DrawText(RespawnString, FColor::Cyan, (ScreenDimensions.X - RespawnStringSize.X) / 2.0f, (ScreenDimensions.Y - RespawnStringSize.Y) / 2.3f, HUDFont);
@@ -134,20 +128,6 @@ void APrototypeHUD::DrawGameInfo()
     FVector2D ExplosionCountStringSize;
     GetTextSize(ExplosionCountString, ExplosionCountStringSize.X, ExplosionCountStringSize.Y, HUDFont);
     DrawText(ExplosionCountString, FColor::Red, (ScreenDimensions.X / 1.6f), (ScreenDimensions.Y / 3.0f) + EnergyCountStringSize.Y, HUDFont);
-}
-
-void APrototypeHUD::DrawCrosshair()
-{
-    // Find center of the Canvas
-    const FVector2D Center(Canvas->ClipX * 0.5f, Canvas->ClipY * 0.5f);
-
-    // Offset by half the texture's dimensions so that the center of the texture aligns with the center of the Canvas
-    const FVector2D CrosshairDrawPosition((Center.X - (CrosshairTex->GetSurfaceWidth() * 0.5)), (Center.Y - (CrosshairTex->GetSurfaceHeight() * 0.5f)));
-
-    // Draw the crosshair
-    FCanvasTileItem TileItem(CrosshairDrawPosition, CrosshairTex->Resource, FLinearColor::White);
-    TileItem.BlendMode = SE_BLEND_Translucent;
-    Canvas->DrawItem(TileItem);
 }
 
 void APrototypeHUD::DrawScan()

@@ -7,9 +7,10 @@
 
 enum class EPrototypePlayState : short
 {
+    EUnknown,
+    ETutorial,
     EPlaying,
-    EGameOver,
-    EUnknown
+    EGameOver    
 };
 
 UCLASS(minimalapi)
@@ -36,21 +37,24 @@ public:
     /** Amount of energy exploded by hitting the deathfloor */
     float ExplosionCount;
 
+    /** Get the current game mode state */
     EPrototypePlayState GetCurrentState() const;
+
+    /** Set a new game mode state */
     void SetCurrentState(EPrototypePlayState NewState);
 
+    /** Override function used when game is launched */
     virtual void BeginPlay() override;
-
+    
 private:
 
-    // List of spawn volume actors in the scene
-    TArray<ASpawnVolume*> SpawnVolumeActors;
-
-    // List of death floor actors in the scene
-    TArray<ADeathFloor*> DeathFloorActors;
-
+    /** Enable-Disable spawning for all spawn volumes */
+    void ToggleSpawnVolumes(bool Toggle);
+    
+    /** Current game mode state */
     EPrototypePlayState CurrentState;
 
+    /** Handle a new game mode state */
     void HandleNewState(EPrototypePlayState NewState);
 
 };

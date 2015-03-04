@@ -6,13 +6,13 @@
 
 ADeathFloor::ADeathFloor(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
-    // Create the simple StaticMeshComponent to represent the pickup in the level
-    WhereToSpawn = ObjectInitializer.CreateDefaultSubobject<UBoxComponent>(this, TEXT("WhereToSpawn"));
+    // Create the simple StaticMeshComponent to represent the death floor
+    DeathFloorCollider = ObjectInitializer.CreateDefaultSubobject<UBoxComponent>(this, TEXT("DeathFloorCollider"));
 
     // Set the StaticMeshComponent as the root component
-    RootComponent = WhereToSpawn;
+    RootComponent = DeathFloorCollider;
 
-    // Make the DeathFloor tickable
+    // Make the actor tickable
     PrimaryActorTick.bCanEverTick = true;
 }
 
@@ -20,7 +20,7 @@ void ADeathFloor::Tick(float DeltaSeconds)
 {
     // Get all overlapping Actors and store them in a CollectedActors array
     TArray<AActor*> CollectedActors;
-    WhereToSpawn->GetOverlappingActors(CollectedActors);
+    DeathFloorCollider->GetOverlappingActors(CollectedActors);
         
     // For each actor collected
     for (int32 iCollected = 0; iCollected < CollectedActors.Num(); ++iCollected)
