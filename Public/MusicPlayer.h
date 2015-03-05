@@ -28,19 +28,27 @@ public:
 
     // Game song
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
-    class USoundBase* GameMusic;
+    class USoundBase* PlayingMusic;
 
     /** Used to manipulate with the game music */
     UPROPERTY()
-    UAudioComponent* GameMusicAC;
+        UAudioComponent* PlayingMusicAC;
 
-    // Ending song
+    // Game over song
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
-    class USoundBase* EndingMusic;
+    class USoundBase* GameOverMusic;
 
-    /** Used to manipulate with the ending music */
+    /** Used to manipulate with the game over music */
     UPROPERTY()
-    UAudioComponent* EndingMusicAC;
+    UAudioComponent* GameOverMusicAC;
+
+    // Game won song
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
+    class USoundBase* GameWonMusic;
+
+    /** Used to manipulate with the game won music */
+    UPROPERTY()
+    UAudioComponent* GameWonMusicAC;
 	
 	// Play a song
     void PlayMusic(EPrototypePlayState NewState);

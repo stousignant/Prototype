@@ -25,7 +25,7 @@ void AEnergyPickup::OnPickedUp_Implementation()
 
     // Increment the energy counter
     APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-    MyGameMode->EnergyCount++;   
+    MyGameMode->IncrementEnergy();
 
     // Show particle effect
     UGameplayStatics::SpawnEmitterAtLocation(this, ExplosionEffect, GetActorLocation(), GetActorRotation(), true);
@@ -44,7 +44,7 @@ void AEnergyPickup::Explode()
 
     // Increment the missed energy counter
     APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-    MyGameMode->ExplosionCount++;    
+    MyGameMode->IncrementExplosion();
 
     // Play explosion sound
     UGameplayStatics::PlaySoundAtLocation(this, ExplosionSound, GetActorLocation());

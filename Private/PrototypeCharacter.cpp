@@ -51,9 +51,9 @@ APrototypeCharacter::APrototypeCharacter(const FObjectInitializer& ObjectInitial
     ScanOffset2 = 10.0f;
 
     // Set power variables
-    SpeedPowerLevel = 1.0f;
-    JumpPowerLevel = 1.0f;
-    StaminaPowerLevel = 1.0f;
+    SpeedPowerLevel = 4.0f;
+    JumpPowerLevel = 4.0f;
+    StaminaPowerLevel = 4.0f;
 
     // Set misc variables
     WindControlModifier = 4000;

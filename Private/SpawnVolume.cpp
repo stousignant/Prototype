@@ -2,6 +2,7 @@
 #include "SpawnVolume.h"
 #include "Pickup.h"
 #include "EnergyPickup.h"
+#include "PrototypeGameMode.h"
 
 ASpawnVolume::ASpawnVolume(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -57,6 +58,16 @@ void ASpawnVolume::SpawnPickup()
             }
             // Increase difficulty
             SpawnedSpeedLevel++;
+
+            // Increment the spawn counter
+            SpawnCounter++;
+
+            // Stop spawning if maximum is reached
+            APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+            if (SpawnCounter >= MyGameMode->EnergyMax)
+            {
+                ToggleSpawning(false);
+            }
         }
     }
 }

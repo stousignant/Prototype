@@ -25,17 +25,26 @@ void AMusicPlayer::PlayMusic(EPrototypePlayState NewState)
     {
         TutorialMusicAC->Stop();
 
-        GameMusicAC = UGameplayStatics::PlaySoundAttached(GameMusic, MyCharacter->GetRootComponent());
-        GameMusicAC->Play();
+        PlayingMusicAC = UGameplayStatics::PlaySoundAttached(PlayingMusic, MyCharacter->GetRootComponent());
+        PlayingMusicAC->Play();
     }
     break;
     //
     case EPrototypePlayState::EGameOver:
     {
-        GameMusicAC->Stop();
+        PlayingMusicAC->Stop();
 
-        EndingMusicAC = UGameplayStatics::PlaySoundAttached(EndingMusic, MyCharacter->GetRootComponent());
-        EndingMusicAC->Play();
+        GameOverMusicAC = UGameplayStatics::PlaySoundAttached(GameOverMusic, MyCharacter->GetRootComponent());
+        GameOverMusicAC->Play();
+    }
+    break;
+    //
+    case EPrototypePlayState::EGameWon:
+    {
+        PlayingMusicAC->Stop();
+
+        GameWonMusicAC = UGameplayStatics::PlaySoundAttached(GameWonMusic, MyCharacter->GetRootComponent());
+        GameWonMusicAC->Play();
     }
     break;
     // 

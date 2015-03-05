@@ -3,6 +3,7 @@
 #include "PrototypeHUD.h"
 #include "PrototypeCharacter.h"
 #include "MusicPlayer.h"
+#include "DynamicEnvAsset.h"
 #include "Kismet/GameplayStatics.h"
 
 APrototypeGameMode::APrototypeGameMode(const FObjectInitializer& ObjectInitializer)	: Super(ObjectInitializer)
@@ -15,22 +16,68 @@ APrototypeGameMode::APrototypeGameMode(const FObjectInitializer& ObjectInitializ
 	HUDClass = APrototypeHUD::StaticClass();
 
     // Set the default values 
-    ExplosionMax = 3.0f;
+    EnergyMax = 2.0f;
     EnergyCount = 0.0f;
+    ExplosionMax = 3.0f;
     ExplosionCount = 0.0f;
+    
 }
 
 void APrototypeGameMode::Tick(float DeltaSeconds)
 {
+    /*
     APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
 
     // If the number of explosions has not meet the maximum
-    if (ExplosionCount < ExplosionMax)
+    if (ExplosionCount >= ExplosionMax)
     {
-        // Decrease the character's power
-        //MyCharacter->PowerLevel = FMath::FInterpTo(MyCharacter->PowerLevel, 0.f, DeltaSeconds, DecayRate);
+        SetCurrentState(EPrototypePlayState::EGameOver);
     }
     else
+    {
+        
+    }*/
+}
+
+float APrototypeGameMode::GetEnergyCount()
+{
+    return EnergyCount;
+}
+
+void APrototypeGameMode::IncrementEnergy(int value)
+{
+    EnergyCount += value;
+
+    if (EnergyCount >= EnergyMax)
+    {
+        SetCurrentState(EPrototypePlayState::EGameWon);
+    }
+}
+
+float APrototypeGameMode::GetExplosionCount()
+{
+    return ExplosionCount;
+}
+
+void APrototypeGameMode::IncrementExplosion(int value)
+{
+    ExplosionCount += value;
+
+    // TODO ENV
+    // Find all the dynamic environment assets
+    TArray<AActor*> FoundDynamicEnvAssetActors;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADynamicEnvAsset::StaticClass(), FoundDynamicEnvAssetActors);
+
+    for (auto Actor : FoundDynamicEnvAssetActors)
+    {
+        ADynamicEnvAsset* DynamicEnvAsset = Cast<ADynamicEnvAsset>(Actor);
+        if (DynamicEnvAsset)
+        {
+            //DynamicEnvAsset
+        }
+    }
+
+    if (ExplosionCount >= ExplosionMax)
     {
         SetCurrentState(EPrototypePlayState::EGameOver);
     }
@@ -69,6 +116,12 @@ void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
 
         APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
         PlayerController->SetCinematicMode(true, true, false);
+    }
+    break;
+    // If the game is over, the spawn volumes should deactivate
+    case EPrototypePlayState::EGameWon:
+    {
+        // Do nothing, let player have fun
     }
     break;
     // 

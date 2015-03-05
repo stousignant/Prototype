@@ -10,7 +10,8 @@ enum class EPrototypePlayState : short
     EUnknown,
     ETutorial,
     EPlaying,
-    EGameOver    
+    EGameOver,
+    EGameWon
 };
 
 UCLASS(minimalapi)
@@ -27,21 +28,31 @@ public:
     /** Tick */
     virtual void Tick(float DeltaSeconds) override;
 
+    /** Number of energy to end the game */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = GameMode)
+    float EnergyMax;
+
     /** Number of explosions before the game ends */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = GameMode)
     float ExplosionMax;
-
-    /** Amount of energy scanned by the player */
-    float EnergyCount;
-
-    /** Amount of energy exploded by hitting the deathfloor */
-    float ExplosionCount;
-
+    
     /** Get the current game mode state */
     EPrototypePlayState GetCurrentState() const;
 
     /** Set a new game mode state */
     void SetCurrentState(EPrototypePlayState NewState);
+
+    /** Get the energy count */
+    float GetEnergyCount();
+
+    /** Increment the energy count (default + 1) */
+    void IncrementEnergy(int value = 1);
+
+    /** Get the explosion count */
+    float GetExplosionCount();
+
+    /** Increment the explosion count (default + 1) */
+    void IncrementExplosion(int value = 1);
 
     /** Override function used when game is launched */
     virtual void BeginPlay() override;
@@ -56,6 +67,12 @@ private:
 
     /** Handle a new game mode state */
     void HandleNewState(EPrototypePlayState NewState);
+
+    /** Amount of energy scanned by the player */
+    float EnergyCount;
+
+    /** Amount of energy exploded by hitting the deathfloor */
+    float ExplosionCount;
 
 };
 

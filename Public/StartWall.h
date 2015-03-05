@@ -22,4 +22,7 @@ public:
     UPROPERTY(VisibleInstanceOnly, Category = Gameplay)
     UBoxComponent* StartWallCollider;	
 
+    /** Enable-Disable the startwall */
+    bool bIsEnabled;
+
 };

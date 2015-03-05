@@ -41,6 +41,9 @@ public:
     /** Draw the game over state */
     void DrawGameOver();
 
+    /** Draw the game won state */
+    void DrawGameWon();
+
     /** Scanning progress value */
     float ScanProgress;
 

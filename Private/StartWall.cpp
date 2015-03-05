@@ -14,32 +14,38 @@ AStartWall::AStartWall(const FObjectInitializer& ObjectInitializer) : Super(Obje
 
     // Make the actor tickable
     PrimaryActorTick.bCanEverTick = true;
+
+    // Enable the start wall at first
+    bIsEnabled = true;
 }
 
 void AStartWall::Tick(float DeltaSeconds)
 {
-    // Get all overlapping Actors and store them in a CollectedActors array
-    TArray<AActor*> CollectedActors;
-    StartWallCollider->GetOverlappingActors(CollectedActors);
-
-    // For each actor collected
-    for (int32 iCollected = 0; iCollected < CollectedActors.Num(); ++iCollected)
+    if (bIsEnabled)
     {
-        // * PLAYER *
-        // Cast the collected actor to APrototypeCharacter
-        APrototypeCharacter* const TestCharacter = Cast<APrototypeCharacter>(CollectedActors[iCollected]);
+        // Get all overlapping Actors and store them in a CollectedActors array
+        TArray<AActor*> CollectedActors;
+        StartWallCollider->GetOverlappingActors(CollectedActors);
 
-        // if the cast is successful, and the player is valid and active
-        if (TestCharacter && !TestCharacter->IsPendingKill())
+        // For each actor collected
+        for (int32 iCollected = 0; iCollected < CollectedActors.Num(); ++iCollected)
         {
-            // Start game mode
-            APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-            MyGameMode->SetCurrentState(EPrototypePlayState::EPlaying);
+            // * PLAYER *
+            // Cast the collected actor to APrototypeCharacter
+            APrototypeCharacter* const TestCharacter = Cast<APrototypeCharacter>(CollectedActors[iCollected]);
 
-            // Stop ticking
-            PrimaryActorTick.bCanEverTick = false;
+            // if the cast is successful, and the player is valid and active
+            if (TestCharacter && !TestCharacter->IsPendingKill())
+            {
+                // Start game mode
+                APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+                MyGameMode->SetCurrentState(EPrototypePlayState::EPlaying);
+
+                // Stop ticking
+                bIsEnabled = false;
+            }
         }
-    }
+    }    
 }
 
 

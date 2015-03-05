@@ -38,6 +38,9 @@ public:
     /** Speed of the object spawned */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
     float SpawnedSpeedLevel;
+    
+    /** Counter to keep track of the number of object spawned */
+    float SpawnCounter;
 
     virtual void Tick(float DeltaSeconds) override;
 
