@@ -40,7 +40,7 @@ void ADeathFloor::Tick(float DeltaSeconds)
         APrototypeCharacter* const TestCharacter = Cast<APrototypeCharacter>(CollectedActors[iCollected]);
 
         // if the cast is successful, and the player is valid and active
-        if (TestCharacter && !TestCharacter->IsPendingKill())
+        if (TestCharacter && !TestCharacter->IsPendingKill() && !TestCharacter->bIsDead)
         {
             TestCharacter->Die();
         }

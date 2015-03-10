@@ -21,8 +21,16 @@ public:
     virtual void Tick(float DeltaSeconds) override;
 
     // Speed parameter of the energy
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
     float SpeedLevel;
+
+    // Falling decay rate
+    float DecayRate;
+
+    // Fall speed
+    float FallSpeed;
+
+    // Delay before stopping the decay
+    float TimerDecay;
 
     // Override the OnPickedUp function
     void OnPickedUp_Implementation() override;

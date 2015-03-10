@@ -40,23 +40,23 @@ APrototypeCharacter::APrototypeCharacter(const FObjectInitializer& ObjectInitial
 
     // Set default power values
     RunSpeed = 1500.0f;
-    GetCharacterMovement()->JumpZVelocity = 1500.0f;
+    GetCharacterMovement()->JumpZVelocity = 1800.0f;
     StaminaDrain = 1.0f;
     
     // Set scan variables
     bIsScanning = false;
-    ScanMaximum = 180.0f;
+    ScanMaximum = 2.0f; // in seconds
     EnergyCount = 0.0f;
     ScanOffset1 = 100.0f;
     ScanOffset2 = 10.0f;
 
     // Set power variables
-    SpeedPowerLevel = 4.0f;
-    JumpPowerLevel = 4.0f;
-    StaminaPowerLevel = 4.0f;
+    SpeedPowerLevel = 1.0f;
+    JumpPowerLevel = 1.0f;
+    StaminaPowerLevel = 1.0f;
 
     // Set misc variables
-    WindControlModifier = 4000;
+    WindControlModifier = 3999;
     bIsDead = false;
 
     // Position of the camera on the character
@@ -84,42 +84,22 @@ void APrototypeCharacter::Tick(float DeltaSeconds)
     Super::Tick(DeltaSeconds);
     
     // Manage the dash
-    UpdateDash();
+    UpdateDash(DeltaSeconds);
 
     // Manage the stamina
-    UpdateStamina();
+    UpdateStamina(DeltaSeconds);
 
     // Manage wall riding
     UpdateWallRide(DeltaSeconds);
 
     // Manage respawn position
-    UpdateRespawnPoint();
+    UpdateRespawnPoint(DeltaSeconds);
 
     // Manage the scanning
-    UpdateScan();
-        
-    // * TEST DEBUG *
-    // Shows a debug line of the input vector
-    FVector AimStartingPoint = GetActorLocation() + CameraRelativePosition;
-    FVector AimEndingPoint = FirstPersonCameraComponent->GetComponentRotation().Vector() * ScanDistance;
-    //FVector AimEndingPoint = Controller->GetControlRotation().Vector() * ScanDistance; // Same thing
-    //DrawDebugLine(GetWorld(), AimStartingPoint + FVector(0, 0, -5), AimEndingPoint, FColor(255, 255, 255));
-
-    /*
-    FVector AimStart;
-    FRotator AimRotation;
-
-    GetActorEyesViewPoint(AimStart, AimRotation);
-
-    AimStart += FVector(0, 0, -5);
-
-    FVector AimEnd = AimStart + AimRotation.Vector() * ScanDistance;
-
-    DrawDebugLine(GetWorld(), AimStart, AimEnd, FColor::White);
-    */
+    UpdateScan(DeltaSeconds);
 }
 
-void APrototypeCharacter::UpdateDash()
+void APrototypeCharacter::UpdateDash(float DeltaSeconds)
 {
     if (bIsDashing)
     {
@@ -132,14 +112,6 @@ void APrototypeCharacter::UpdateDash()
     {
         bIsFast = true;
         UpdateWindSounds(bIsFast);
-
-        // Get the character
-        //APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
-        //MyCharacter->Motion
-
-        //struct FPostProcessSettings PostProcessSettings;
-        //PostProcessSettings.MotionBlurAmount = 1.f;
-
     }
     // Exited high speed
     else if (GetCharacterMovement()->Velocity.Size() < WindControlModifier && bIsFast)
@@ -149,12 +121,13 @@ void APrototypeCharacter::UpdateDash()
     }
 }
 
-void APrototypeCharacter::UpdateStamina()
+void APrototypeCharacter::UpdateStamina(float DeltaSeconds)
 {
     if (bIsDashing)
     {
         // Remove stamina
-        StaminaCurrent = (StaminaCurrent - StaminaDrain < 0) ? 0 : StaminaCurrent - StaminaDrain;
+        float StaminaDrainWithDelta = StaminaDrain * DeltaSeconds * 60.0f;
+        StaminaCurrent = (StaminaCurrent - StaminaDrainWithDelta < 0) ? 0 : StaminaCurrent - StaminaDrainWithDelta;
 
         if (StaminaCurrent <= 0)
         {
@@ -165,15 +138,20 @@ void APrototypeCharacter::UpdateStamina()
     // If the current stamina isn't maxed
     else if (StaminaCurrent < StaminaMax)
     {
+        // Add stamina
+        float StaminaReplenishWithDelta = StaminaReplenish * DeltaSeconds * 60.0f;
+
         if (bIsRunning)
         {
-            // Add stamina
-            StaminaCurrent = (StaminaCurrent + StaminaReplenish > StaminaMax) ? StaminaMax : StaminaCurrent + StaminaReplenish;            
+            StaminaCurrent = (StaminaCurrent + StaminaReplenishWithDelta > StaminaMax) ? StaminaMax : StaminaCurrent + StaminaReplenishWithDelta;
+        }
+        else if (bIsCrouched && !GetCharacterMovement()->IsFalling())
+        {
+            StaminaCurrent = (StaminaCurrent + StaminaReplenishWithDelta * 2 > StaminaMax) ? StaminaMax : StaminaCurrent + StaminaReplenishWithDelta * 3;
         }
         else
         {
-            // Add stamina
-            StaminaCurrent = (StaminaCurrent + StaminaReplenish * 2 > StaminaMax) ? StaminaMax : StaminaCurrent + StaminaReplenish * 2;
+            StaminaCurrent = (StaminaCurrent + StaminaReplenishWithDelta * 2 > StaminaMax) ? StaminaMax : StaminaCurrent + StaminaReplenishWithDelta * 2;
         }
     }    
 }
@@ -224,17 +202,22 @@ void APrototypeCharacter::UpdateWallRide(float DeltaSeconds)
     }
 }
 
-void APrototypeCharacter::UpdateRespawnPoint()
+void APrototypeCharacter::UpdateRespawnPoint(float DeltaSeconds)
 {
-    RespawnSaveTimer++;
-    if (RespawnSaveTimer >= RespawnSaveDelay && !GetCharacterMovement()->IsFalling())
+    // Only update respawn point if in playing mode
+    APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+    if (MyGameMode->GetCurrentState() == EPrototypePlayState::EPlaying)
     {
-        RespawnPosition = GetActorLocation();
-        RespawnSaveTimer = 0.f;
-    }
+        RespawnSaveTimer++;
+        if (RespawnSaveTimer >= RespawnSaveDelay && !GetCharacterMovement()->IsFalling())
+        {
+            RespawnPosition = GetActorLocation();
+            RespawnSaveTimer = 0.f;
+        }
+    }    
 }
 
-void APrototypeCharacter::UpdateScan()
+void APrototypeCharacter::UpdateScan(float DeltaSeconds)
 {
     // Skip the scan update if player isn't pressing the scan input
     if (!bWantsToScan)
@@ -254,10 +237,12 @@ void APrototypeCharacter::UpdateScan()
     ULineBatchComponent* const LineBatcher = GetWorld()->ForegroundLineBatcher;
 
     // Trace the line for scan
-    LineBatcher->DrawLine(AimStart + AimRotation.Vector().UpVector * ScanOffset1 + GetActorRightVector() * ScanOffset1, AimEnd + AimRotation.Vector().UpVector * ScanOffset2 + GetActorRightVector() * ScanOffset2, FColor::Cyan, 128, 10.0f, 1.0f); // Top right
-    LineBatcher->DrawLine(AimStart - AimRotation.Vector().UpVector * ScanOffset1 + GetActorRightVector() * ScanOffset1, AimEnd - AimRotation.Vector().UpVector * ScanOffset2 + GetActorRightVector() * ScanOffset2, FColor::Cyan, 128, 10.0f, 1.0f); // Bottom right
-    LineBatcher->DrawLine(AimStart - AimRotation.Vector().UpVector * ScanOffset1 - GetActorRightVector() * ScanOffset1, AimEnd - AimRotation.Vector().UpVector * ScanOffset2 - GetActorRightVector() * ScanOffset2, FColor::Cyan, 128, 10.0f, 1.0f); // Bottom left
-    LineBatcher->DrawLine(AimStart + AimRotation.Vector().UpVector * ScanOffset1 - GetActorRightVector() * ScanOffset1, AimEnd + AimRotation.Vector().UpVector * ScanOffset2 - GetActorRightVector() * ScanOffset2, FColor::Cyan, 128, 10.0f, 1.0f); // Top left
+    FVector RelativeUpVector = FirstPersonCameraComponent->GetUpVector();
+    FVector RelativeRightVector = FirstPersonCameraComponent->GetRightVector();
+    LineBatcher->DrawLine(AimStart + RelativeUpVector * ScanOffset1 +  RelativeRightVector * ScanOffset1, AimEnd + RelativeUpVector * ScanOffset2 + RelativeRightVector * ScanOffset2, FColor::Cyan, 128, 10.0f, 1.0f); // Top right
+    LineBatcher->DrawLine(AimStart - RelativeUpVector * ScanOffset1 +  RelativeRightVector * ScanOffset1, AimEnd - RelativeUpVector * ScanOffset2 + RelativeRightVector * ScanOffset2, FColor::Cyan, 128, 10.0f, 1.0f); // Bottom right
+    LineBatcher->DrawLine(AimStart - RelativeUpVector * ScanOffset1 -  RelativeRightVector * ScanOffset1, AimEnd - RelativeUpVector * ScanOffset2 - RelativeRightVector * ScanOffset2, FColor::Cyan, 128, 10.0f, 1.0f); // Bottom left
+    LineBatcher->DrawLine(AimStart + RelativeUpVector * ScanOffset1 -  RelativeRightVector * ScanOffset1, AimEnd + RelativeUpVector * ScanOffset2 - RelativeRightVector * ScanOffset2, FColor::Cyan, 128, 10.0f, 1.0f); // Top left
 
     // Set the params for the raycast
     FHitResult testHitResult(ForceInit);
@@ -265,10 +250,7 @@ void APrototypeCharacter::UpdateScan()
     TraceParams.bTraceComplex = true;
     TraceParams.bTraceAsyncScene = true;
     TraceParams.bReturnPhysicalMaterial = false;
-
-    //FVector AimStartingPoint = GetActorLocation() + CameraRelativePosition;
-    //FVector AimEndingPoint = FirstPersonCameraComponent->GetComponentRotation().Vector() * ScanDistance;
-
+    
     // Perform a trace from the player's aim
     if (GetWorld()->LineTraceSingle(testHitResult, AimStart, AimEnd, ECC_WorldStatic, TraceParams))
     {
@@ -283,7 +265,7 @@ void APrototypeCharacter::UpdateScan()
     // Progress of the scan
     if (bIsScanning)
     {
-        ScanProgress++;
+        ScanProgress += DeltaSeconds;
 
         // Scan completed
         if (ScanProgress >= ScanMaximum)
@@ -309,9 +291,6 @@ void APrototypeCharacter::SetupPlayerInputComponent(class UInputComponent* Input
 {
 	// set up gameplay key bindings
 	check(InputComponent);
-
-	//InputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
-	//InputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
     InputComponent->BindAction("Jump", IE_Pressed, this, &APrototypeCharacter::OnJumpPressed);
     InputComponent->BindAction("Jump", IE_Released, this, &APrototypeCharacter::OnJumpReleased);
@@ -585,15 +564,15 @@ void APrototypeCharacter::OnUpgradePower2Pressed()
 
     if (JumpPowerLevel == 2)
     {
-        GetCharacterMovement()->JumpZVelocity = 2250.0f;
+        GetCharacterMovement()->JumpZVelocity = 2200.0f;
     }
     else if (JumpPowerLevel == 3)
     {
-        GetCharacterMovement()->JumpZVelocity = 3000.0f;
+        GetCharacterMovement()->JumpZVelocity = 2600.0f;
     }
     else if (JumpPowerLevel == 4)
     {
-        GetCharacterMovement()->JumpZVelocity = 3750.0f;
+        GetCharacterMovement()->JumpZVelocity = 3000.0f;
     }
 }
 
@@ -772,6 +751,12 @@ void APrototypeCharacter::Die()
     // Remove any velocity
     GetCharacterMovement()->Velocity = FVector(0,0,0);
 
+    // Change the fall speed
+    GetPawnPhysicsVolume()->TerminalVelocity = FallSpeed / 50.f;
+
+    // Disable movement
+    bMovementBlocked = true;
+
     // Play death sound
     UGameplayStatics::PlaySoundAtLocation(this, DeathSound, GetActorLocation());
     
@@ -783,6 +768,9 @@ void APrototypeCharacter::Die()
 
 void APrototypeCharacter::Respawn()
 {
+    // Enable movement
+    bMovementBlocked = false;
+
     // Change the fall speed back to normal
     GetPawnPhysicsVolume()->TerminalVelocity = FallSpeed;
 
@@ -795,8 +783,4 @@ void APrototypeCharacter::Respawn()
     // Set death state to false
     bIsDead = false;
 }
-
-
-//////////////////////////////////////////////////////////////////////////
-// Misc
 

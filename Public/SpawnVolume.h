@@ -23,13 +23,9 @@ public:
     UPROPERTY(EditAnywhere, Category = Spawning)
     TSubclassOf<class APickup> WhatToSpawn;
 
-    /** Minimum spawn delay */
+    /** The current spawn delay */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
-    float SpawnDelayRangeLow;
-
-    /** Maximum spawn delay */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
-    float SpawnDelayRangeHigh;
+    float SpawnDelay;
 
     /** Finds a random point within the BoxComponent */
     UFUNCTION(BlueprintPure, Category = Spawning)
@@ -39,8 +35,23 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
     float SpawnedSpeedLevel;
     
+    /** Minimal distance for object to be spawn between them */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
+    float SpawnDistance;
+
+    /** Speed increment */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
+    float SpeedIncrement;
+
+    /** Spawn delay decrement */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
+    float SpawnDelayDecrement;
+
     /** Counter to keep track of the number of object spawned */
     float SpawnCounter;
+
+    /** Last random location generated */
+    FVector LastRandomLocation;
 
     virtual void Tick(float DeltaSeconds) override;
 
@@ -51,12 +62,6 @@ private:
 
     /** Whether or not spawning is enabled */
     bool bSpawningEnabled;
-
-    /** Calculates a random spawn delay */
-    float GetRandomSpawnDelay();
-
-    /** The current spawn delay */
-    float SpawnDelay;
 
     /** Handles the spawning of a new pickup */
     void SpawnPickup();

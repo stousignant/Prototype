@@ -16,7 +16,7 @@ APrototypeGameMode::APrototypeGameMode(const FObjectInitializer& ObjectInitializ
 	HUDClass = APrototypeHUD::StaticClass();
 
     // Set the default values 
-    EnergyMax = 2.0f;
+    EnergyMax = 25.0f;
     EnergyCount = 0.0f;
     ExplosionMax = 3.0f;
     ExplosionCount = 0.0f;
@@ -25,18 +25,7 @@ APrototypeGameMode::APrototypeGameMode(const FObjectInitializer& ObjectInitializ
 
 void APrototypeGameMode::Tick(float DeltaSeconds)
 {
-    /*
-    APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
 
-    // If the number of explosions has not meet the maximum
-    if (ExplosionCount >= ExplosionMax)
-    {
-        SetCurrentState(EPrototypePlayState::EGameOver);
-    }
-    else
-    {
-        
-    }*/
 }
 
 float APrototypeGameMode::GetEnergyCount()
@@ -48,7 +37,8 @@ void APrototypeGameMode::IncrementEnergy(int value)
 {
     EnergyCount += value;
 
-    if (EnergyCount >= EnergyMax)
+    // Check if game won
+    if ((EnergyCount + ExplosionCount) >= EnergyMax)
     {
         SetCurrentState(EPrototypePlayState::EGameWon);
     }
@@ -62,24 +52,16 @@ float APrototypeGameMode::GetExplosionCount()
 void APrototypeGameMode::IncrementExplosion(int value)
 {
     ExplosionCount += value;
-
-    // TODO ENV
-    // Find all the dynamic environment assets
-    TArray<AActor*> FoundDynamicEnvAssetActors;
-    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADynamicEnvAsset::StaticClass(), FoundDynamicEnvAssetActors);
-
-    for (auto Actor : FoundDynamicEnvAssetActors)
-    {
-        ADynamicEnvAsset* DynamicEnvAsset = Cast<ADynamicEnvAsset>(Actor);
-        if (DynamicEnvAsset)
-        {
-            //DynamicEnvAsset
-        }
-    }
-
+    
+    // Check if game over
     if (ExplosionCount >= ExplosionMax)
     {
         SetCurrentState(EPrototypePlayState::EGameOver);
+    }
+    // Check if game won
+    else if ((EnergyCount + ExplosionCount) >= EnergyMax)
+    {
+        SetCurrentState(EPrototypePlayState::EGameWon);
     }
 }
 

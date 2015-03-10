@@ -20,19 +20,19 @@ public:
     virtual void Tick(float DeltaSeconds) override;
     
     /** Dash update */
-    void UpdateDash();
+    void UpdateDash(float DeltaSeconds);
 
     /** Stamina update */
-    void UpdateStamina();
+    void UpdateStamina(float DeltaSeconds);
 
     /** Wall ride update */
     void UpdateWallRide(float DeltaSeconds);
 
     /** Respawn point saving update */
-    void UpdateRespawnPoint();
+    void UpdateRespawnPoint(float DeltaSeconds);
 
     /** Scanning update */
-    void UpdateScan();
+    void UpdateScan(float DeltaSeconds);
 
 
     //////////////////////////////////////////////////////////////////////////
@@ -301,19 +301,19 @@ public:
     USphereComponent* CollectionSphere;
 
     /** Stats unspent of our character */
-    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Power)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
     float StatsCount;
 
     /** Speed power level of our character */
-    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Power)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
     float SpeedPowerLevel;
 
     /** Jump power level of our character */
-    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Power)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
     float JumpPowerLevel;
 
     /** Stamina power level of our character */
-    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Power)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
     float StaminaPowerLevel;
 
 

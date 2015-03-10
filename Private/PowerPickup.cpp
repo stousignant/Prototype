@@ -12,7 +12,7 @@ APowerPickup::APowerPickup(const FObjectInitializer& ObjectInitializer) : Super(
 // Tick (called 60 times per second due to the 60 fps limit)
 void APowerPickup::Tick(float DeltaSeconds)
 {
-    SetActorRotation(GetActorRotation() + FRotator(0.0f, 1.0f, 0.0f));
+    SetActorRotation(GetActorRotation() + FRotator(0.0f, DeltaSeconds * 100, 0.0f));
 }
 
 void APowerPickup::OnPickedUp_Implementation()

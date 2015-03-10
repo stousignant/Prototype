@@ -3,6 +3,7 @@
 #include "Pickup.h"
 #include "EnergyPickup.h"
 #include "PrototypeGameMode.h"
+#include "Engine.h"
 
 ASpawnVolume::ASpawnVolume(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -13,13 +14,22 @@ ASpawnVolume::ASpawnVolume(const FObjectInitializer& ObjectInitializer) : Super(
     RootComponent = WhereToSpawn;
 
     // Set the spawn delay range and get the first SpawnDelay
-    SpawnDelayRangeLow = 5.0f;
-    SpawnDelayRangeHigh = 5.0f;
-    SpawnDelay = GetRandomSpawnDelay();
-    SpawnTime = SpawnDelayRangeHigh; // Start spawning immediately
+    SpawnDelay = 40.0f;
+
+    // Start spawning immediately
+    SpawnTime = SpawnDelay; 
 
     // Set the default speed level for the spawning objects
-    SpawnedSpeedLevel = 5.0f;
+    SpawnedSpeedLevel = 20.0f;
+
+    // Set the default speed increment
+    SpeedIncrement = 1.0f;
+
+    // Set the default spawn delay decrement
+    SpawnDelayDecrement = 1.0f;
+
+    // Set the default spawn distance
+    SpawnDistance = 20000.0f;
 
     // Make the SpawnVolume tickable
     PrimaryActorTick.bCanEverTick = true;
@@ -57,7 +67,7 @@ void ASpawnVolume::SpawnPickup()
                 SpawnedEnergy->SpeedLevel = SpawnedSpeedLevel;
             }
             // Increase difficulty
-            SpawnedSpeedLevel++;
+            SpawnedSpeedLevel += SpeedIncrement;
 
             // Increment the spawn counter
             SpawnCounter++;
@@ -70,12 +80,6 @@ void ASpawnVolume::SpawnPickup()
             }
         }
     }
-}
-
-float ASpawnVolume::GetRandomSpawnDelay()
-{
-    // Get a random float that falls within the spawn delay range
-    return FMath::FRandRange(SpawnDelayRangeLow, SpawnDelayRangeHigh);
 }
 
 FVector ASpawnVolume::GetRandomPointInVolume()
@@ -91,22 +95,27 @@ FVector ASpawnVolume::GetRandomPointInVolume()
     Origin = WhereToSpawn->Bounds.Origin;
     BoxExtent = WhereToSpawn->Bounds.BoxExtent;
 
-    // Calculate the minimum X, Y, and Z
-    MinX = Origin.X - BoxExtent.X / 2.f;
-    MinY = Origin.Y - BoxExtent.Y / 2.f;
-    MinZ = Origin.Z - BoxExtent.Z / 2.f;
+    do
+    {
+        // Calculate the minimum X, Y, and Z
+        MinX = Origin.X - BoxExtent.X;
+        MinY = Origin.Y - BoxExtent.Y;
+        MinZ = Origin.Z;
 
-    // Calculate the maximum X, Y, and Z
-    MaxX = Origin.X + BoxExtent.X / 2.f;
-    MaxY = Origin.Y + BoxExtent.Y / 2.f;
-    MaxZ = Origin.Z + BoxExtent.Z / 2.f;
-
-    // The random spawn location will fall between the min and max X, Y, and Z
-    RandomLocation.X = FMath::FRandRange(MinX, MaxX);
-    RandomLocation.Y = FMath::FRandRange(MinY, MaxY);
-    RandomLocation.Z = FMath::FRandRange(MinZ, MaxZ);
-
+        // Calculate the maximum X, Y, and Z
+        MaxX = Origin.X + BoxExtent.X;
+        MaxY = Origin.Y + BoxExtent.Y;
+        MaxZ = Origin.Z;
+        
+        // The random spawn location will fall between the min and max X, Y, and Z
+        RandomLocation.X = FMath::FRandRange(MinX, MaxX);
+        RandomLocation.Y = FMath::FRandRange(MinY, MaxY);
+        RandomLocation.Z = FMath::FRandRange(MinZ, MaxZ);
+        
+    } while (FVector::Dist(LastRandomLocation, RandomLocation) < SpawnDistance);
+    
     // Return the random spawn location
+    LastRandomLocation = RandomLocation;
     return RandomLocation;
 }
 
@@ -125,11 +134,11 @@ void ASpawnVolume::Tick(float DeltaSeconds)
     {
         SpawnPickup();
 
-        //Deduct spawn delay from accumulated time value
+        // Deduct spawn delay from accumulated time value
         SpawnTime -= SpawnDelay;
 
-        SpawnDelay = GetRandomSpawnDelay();
-
+        // Reduce spawn delay per spawn
+        SpawnDelay -= SpawnDelayDecrement;
     }
 }
 
