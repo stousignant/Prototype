@@ -16,11 +16,10 @@ APrototypeGameMode::APrototypeGameMode(const FObjectInitializer& ObjectInitializ
 	HUDClass = APrototypeHUD::StaticClass();
 
     // Set the default values 
-    EnergyMax = 25.0f;
+    EnergyMax = 5.0f;
     EnergyCount = 0.0f;
     ExplosionMax = 3.0f;
-    ExplosionCount = 0.0f;
-    
+    ExplosionCount = 0.0f;    
 }
 
 void APrototypeGameMode::Tick(float DeltaSeconds)
@@ -38,7 +37,7 @@ void APrototypeGameMode::IncrementEnergy(int value)
     EnergyCount += value;
 
     // Check if game won
-    if ((EnergyCount + ExplosionCount) >= EnergyMax)
+    if (GetCurrentState() == EPrototypePlayState::EEarlyGame && (EnergyCount + ExplosionCount) >= EnergyMax)
     {
         SetCurrentState(EPrototypePlayState::EGameWon);
     }
@@ -59,7 +58,7 @@ void APrototypeGameMode::IncrementExplosion(int value)
         SetCurrentState(EPrototypePlayState::EGameOver);
     }
     // Check if game won
-    else if ((EnergyCount + ExplosionCount) >= EnergyMax)
+    else if (GetCurrentState() == EPrototypePlayState::EEarlyGame && (EnergyCount + ExplosionCount) >= EnergyMax)
     {
         SetCurrentState(EPrototypePlayState::EGameWon);
     }
@@ -86,24 +85,41 @@ void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
     }
     break;
     // When we're playing, the spawn volumes can spawn
-    case EPrototypePlayState::EPlaying:
+    case EPrototypePlayState::EEarlyGame:
     {
         ToggleSpawnVolumes(true);
     }
     break;
-    // If the game is over, the spawn volumes should deactivate
+    //
     case EPrototypePlayState::EGameOver:
     {
+        // If the game is over, the spawn volumes should deactivate
         ToggleSpawnVolumes(false);
 
         APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
         PlayerController->SetCinematicMode(true, true, false);
     }
     break;
-    // If the game is over, the spawn volumes should deactivate
+    //
     case EPrototypePlayState::EGameWon:
     {
-        // Do nothing, let player have fun
+        // Get the character and block mouvement
+        APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+        MyCharacter->bMovementBlocked = true;
+
+        // If the game is won, the spawn volumes should deactivate
+        ToggleSpawnVolumes(false);
+    }
+    break;
+    //
+    case EPrototypePlayState::ELateGame:
+    {
+        // Get the character and unblock mouvement
+        APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+        MyCharacter->bMovementBlocked = false;
+
+        // If the game is won, the spawn volumes should deactivate
+        ToggleSpawnVolumes(true);
     }
     break;
     // 

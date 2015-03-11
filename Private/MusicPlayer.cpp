@@ -21,18 +21,19 @@ void AMusicPlayer::PlayMusic(EPrototypePlayState NewState)
     }
     break;
     //
-    case EPrototypePlayState::EPlaying:
+    case EPrototypePlayState::EEarlyGame:
     {
         TutorialMusicAC->Stop();
 
-        PlayingMusicAC = UGameplayStatics::PlaySoundAttached(PlayingMusic, MyCharacter->GetRootComponent());
-        PlayingMusicAC->Play();
+        EarlyGameMusicAC = UGameplayStatics::PlaySoundAttached(EarlyGameMusic, MyCharacter->GetRootComponent());
+        EarlyGameMusicAC->Play();
     }
     break;
     //
     case EPrototypePlayState::EGameOver:
     {
-        PlayingMusicAC->Stop();
+        EarlyGameMusicAC->Stop();
+        LateGameMusicAC->Stop();
 
         GameOverMusicAC = UGameplayStatics::PlaySoundAttached(GameOverMusic, MyCharacter->GetRootComponent());
         GameOverMusicAC->Play();
@@ -41,10 +42,19 @@ void AMusicPlayer::PlayMusic(EPrototypePlayState NewState)
     //
     case EPrototypePlayState::EGameWon:
     {
-        PlayingMusicAC->Stop();
+        EarlyGameMusicAC->Stop();
 
         GameWonMusicAC = UGameplayStatics::PlaySoundAttached(GameWonMusic, MyCharacter->GetRootComponent());
         GameWonMusicAC->Play();
+    }
+    break;
+    //
+    case EPrototypePlayState::ELateGame:
+    {
+        GameWonMusicAC->Stop();
+
+        LateGameMusicAC = UGameplayStatics::PlaySoundAttached(LateGameMusic, MyCharacter->GetRootComponent());
+        LateGameMusicAC->Play();
     }
     break;
     // 

@@ -5,10 +5,13 @@
 
 AEnergyPickup::AEnergyPickup(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
-    // Default values
+    // Default speed
     SpeedLevel = 0.0f;
-    DecayRate = 0.0f;
-    TimerDecay = 0.0f;
+
+    // Create the static mesh component
+    BeamMesh = ObjectInitializer.CreateDefaultSubobject<UStaticMeshComponent>(this, TEXT("BeamMesh"));
+    BeamMesh->SetSimulatePhysics(false);
+    BeamMesh->AttachTo(RootComponent);
 
     // Make the energy tickable
     PrimaryActorTick.bCanEverTick = true;
@@ -18,19 +21,8 @@ AEnergyPickup::AEnergyPickup(const FObjectInitializer& ObjectInitializer) : Supe
 // Tick (called 60 times per second due to the 60 fps limit)
 void AEnergyPickup::Tick(float DeltaSeconds)
 {    
-    FallSpeed = (SpeedLevel * DeltaSeconds * 50)/* - DecayRate*/;
+    FallSpeed = (SpeedLevel * DeltaSeconds * 60);
     SetActorLocation(GetActorLocation() - FVector(0, 0, FallSpeed/2));
-    
-    TimerDecay += DeltaSeconds;
-
-    // Is still in his first 20 seconds of spawning
-    if (TimerDecay < 20.0f)
-    {
-        DecayRate += (0.03f * DeltaSeconds * 50) / TimerDecay;
-    }
-    
-
-    //GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("FallSpeed (%f) DeltaSeconds (%f)"), FallSpeed, DeltaSeconds));
 }
 
 void AEnergyPickup::OnPickedUp_Implementation()

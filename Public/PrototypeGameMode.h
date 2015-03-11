@@ -9,9 +9,10 @@ enum class EPrototypePlayState : short
 {
     EUnknown,
     ETutorial,
-    EPlaying,
+    EEarlyGame,
     EGameOver,
-    EGameWon
+    EGameWon,
+    ELateGame
 };
 
 UCLASS(minimalapi)

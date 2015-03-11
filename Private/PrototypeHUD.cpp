@@ -60,18 +60,22 @@ void APrototypeHUD::DrawPlayerInfo()
     GetTextSize(SpeedString, SpeedStringSize.X, SpeedStringSize.Y, HUDFont);
     DrawText(SpeedString, FColor::Cyan, (ScreenDimensions.X / 3.2f), (ScreenDimensions.Y / 3.0f), HUDFont);
 
-    // Print fake speed
-    //FString FakeSpeedString = FString::Printf(TEXT("FSpeed%1.1f km/h"), MyCharacter->GetVelocity().Size() / 50);
-    //FVector2D FakeSpeedStringSize;
-    //GetTextSize(FakeSpeedString, FakeSpeedStringSize.X, FakeSpeedStringSize.Y, HUDFont);
-    //DrawText(FakeSpeedString, FColor::Cyan, (ScreenDimensions.X / 2.7f), (ScreenDimensions.Y / 2.8f), HUDFont);
-
     // Print stamina
     FString StaminaString = FString::Printf(TEXT("Stamina %0.f"), MyCharacter->StaminaCurrent);
     FVector2D StaminaStringSize;
     GetTextSize(StaminaString, StaminaStringSize.X, StaminaStringSize.Y, HUDFont);
     DrawText(StaminaString, FColor::Green, (ScreenDimensions.X / 3.2f), (ScreenDimensions.Y / 3.0f) + SpeedStringSize.Y, HUDFont);
 
+    // Print missing stamina
+    if (MyCharacter->bIsMissingStamina)
+    {
+        FString MissingStaminaString = FString::Printf(TEXT("Missing Stamina"));
+        FVector2D MissingStaminaStringSize;
+        GetTextSize(MissingStaminaString, MissingStaminaStringSize.X, MissingStaminaStringSize.Y, HUDFont);
+        DrawText(MissingStaminaString, FColor::Red, (ScreenDimensions.X / 3.2f), (ScreenDimensions.Y / 3.0f) + SpeedStringSize.Y + StaminaStringSize.Y, HUDFont);
+    }
+
+    // Print respawn
     if (MyCharacter->bIsDead)
     {
         FString RespawnString = FString::Printf(TEXT("Respawning"));
@@ -182,24 +186,23 @@ void APrototypeHUD::DrawGameWon()
 {
     // Print the Game won text
     FVector2D GameWonSize;
-    GetTextSize(TEXT("PLANET SAVED!"), GameWonSize.X, GameWonSize.Y, HUDFont);
-    DrawText(TEXT("PLANET SAVED!"), FColor::White, (ScreenDimensions.X - GameWonSize.X) / 2.0f, (ScreenDimensions.Y - GameWonSize.Y) / 2.0f, HUDFont);
-
-    // Print the highscore
-    FString HighscoreString = FString::Printf(TEXT("Your highscore is %0.0f"), MyGameMode->GetEnergyCount());
-    FVector2D HighscoreStringSize;
-    GetTextSize(HighscoreString, HighscoreStringSize.X, HighscoreStringSize.Y, HUDFont);
-    DrawText(HighscoreString, FColor::Yellow, (ScreenDimensions.X - HighscoreStringSize.X) / 2.0f, (ScreenDimensions.Y - HighscoreStringSize.Y) / 2.0f + GameWonSize.Y, HUDFont);
+    GetTextSize(TEXT("GAME WON!"), GameWonSize.X, GameWonSize.Y, HUDFont);
+    DrawText(TEXT("GAME WON!"), FColor::White, (ScreenDimensions.X - GameWonSize.X) / 2.0f, (ScreenDimensions.Y - GameWonSize.Y) / 2.0f, HUDFont);
 
     // Print the options
+    FString ContinueString = FString::Printf(TEXT("Continue on Hardcore mode (enter)"));
+    FVector2D ContinueStringSize;
+    GetTextSize(ContinueString, ContinueStringSize.X, ContinueStringSize.Y, HUDFont);
+    DrawText(ContinueString, FColor::Yellow, (ScreenDimensions.X - ContinueStringSize.X) / 2.0f, (ScreenDimensions.Y - ContinueStringSize.Y) / 2.0f + GameWonSize.Y, HUDFont);
+
     FString RestartString = FString::Printf(TEXT("Restart (backspace)"));
     FVector2D RestartStringSize;
     GetTextSize(RestartString, RestartStringSize.X, RestartStringSize.Y, HUDFont);
-    DrawText(RestartString, FColor::Blue, (ScreenDimensions.X - RestartStringSize.X) / 2.0f, (ScreenDimensions.Y - RestartStringSize.Y) / 2.0f + GameWonSize.Y + HighscoreStringSize.Y, HUDFont);
+    DrawText(RestartString, FColor::Blue, (ScreenDimensions.X - RestartStringSize.X) / 2.0f, (ScreenDimensions.Y - RestartStringSize.Y) / 2.0f + GameWonSize.Y + ContinueStringSize.Y, HUDFont);
 
     FString ExitString = FString::Printf(TEXT("Exit (escape)"));
     FVector2D ExitStringSize;
     GetTextSize(ExitString, ExitStringSize.X, ExitStringSize.Y, HUDFont);
-    DrawText(ExitString, FColor::Blue, (ScreenDimensions.X - ExitStringSize.X) / 2.0f, (ScreenDimensions.Y - ExitStringSize.Y) / 2.0f + GameWonSize.Y + HighscoreStringSize.Y + RestartStringSize.Y, HUDFont);
+    DrawText(ExitString, FColor::Blue, (ScreenDimensions.X - ExitStringSize.X) / 2.0f, (ScreenDimensions.Y - ExitStringSize.Y) / 2.0f + GameWonSize.Y + ContinueStringSize.Y + RestartStringSize.Y, HUDFont);
 }
 

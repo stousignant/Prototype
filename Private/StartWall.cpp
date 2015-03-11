@@ -39,7 +39,7 @@ void AStartWall::Tick(float DeltaSeconds)
             {
                 // Start game mode
                 APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-                MyGameMode->SetCurrentState(EPrototypePlayState::EPlaying);
+                MyGameMode->SetCurrentState(EPrototypePlayState::EEarlyGame);
 
                 // Stop ticking
                 bIsEnabled = false;

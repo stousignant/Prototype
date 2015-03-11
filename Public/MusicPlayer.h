@@ -26,13 +26,13 @@ public:
     UPROPERTY()
     UAudioComponent* TutorialMusicAC;
 
-    // Game song
+    // Early Game song
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
-    class USoundBase* PlayingMusic;
+    class USoundBase* EarlyGameMusic;
 
-    /** Used to manipulate with the game music */
+    /** Used to manipulate with the early game music */
     UPROPERTY()
-        UAudioComponent* PlayingMusicAC;
+    UAudioComponent* EarlyGameMusicAC;
 
     // Game over song
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
@@ -49,6 +49,14 @@ public:
     /** Used to manipulate with the game won music */
     UPROPERTY()
     UAudioComponent* GameWonMusicAC;
+
+    // Late Game song
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
+    class USoundBase* LateGameMusic;
+
+    /** Used to manipulate with the late game music */
+    UPROPERTY()
+    UAudioComponent* LateGameMusicAC;
 	
 	// Play a song
     void PlayMusic(EPrototypePlayState NewState);

@@ -19,6 +19,9 @@ public:
     /** Tick */ 
     virtual void Tick(float DeltaSeconds) override;
     
+    /** Run update */
+    void UpdateRun(float DeltaSeconds);
+
     /** Dash update */
     void UpdateDash(float DeltaSeconds);
 
@@ -33,6 +36,9 @@ public:
 
     /** Scanning update */
     void UpdateScan(float DeltaSeconds);
+
+    /** Sliding update */
+    void UpdateSlide(float DeltaSeconds);
 
 
     //////////////////////////////////////////////////////////////////////////
@@ -78,11 +84,11 @@ public:
     //////////////////////////////////////////////////////////////////////////
     // Input
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Camera)
 	float BaseTurnRate;
 
 	/** Base look up/down rate, in deg/sec. Other scaling may affect final rate. */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Camera)
 	float BaseLookUpRate;
     
     /** Frame rate independent turn */
@@ -123,6 +129,10 @@ public:
     UPROPERTY(Transient)
     bool bIsDashing;
 
+    /** Current sliding state */
+    UPROPERTY(Transient)
+    bool bIsSliding;
+
     /** Current jumping state */
     UPROPERTY(Transient)
     bool bWantsToJump;
@@ -133,6 +143,12 @@ public:
     /** If the character going fast */
     bool bIsFast;
 
+    /** If the character is missing stamina for an action */
+    bool bIsMissingStamina;
+
+    /** Missing stamina timer */
+    float MissingStaminaTimer;
+    
     /** Amount of the current stamina */
     float StaminaCurrent;
 
@@ -145,15 +161,15 @@ public:
     bool bIsDead;
 
     /** Amount of the max stamina */
-    UPROPERTY(EditDefaultsOnly, Category = Gameplay)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
     float StaminaMax;
 
     /** Amount of stamina drained by dashing */
-    UPROPERTY(EditDefaultsOnly, Category = Gameplay)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
     float StaminaDrain;
     
     /** Amount of stamina replenished when not dashing */
-    UPROPERTY(EditDefaultsOnly, Category = Gameplay)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
     float StaminaReplenish;
 
     /** Normal fall speed */
@@ -197,6 +213,9 @@ public:
     /** Player pressed crouch action */
     void OnCrouchPressed();    
 
+    /** Change sliding state */
+    void SetSliding(bool bNewSliding);
+
     /** Player pressed scan action */
     void OnScanPressed();
 
@@ -218,6 +237,8 @@ public:
     /** Player pressed the restart game key */
     void OnRestartGamePressed();
 
+    /** Player pressed the continue game key */
+    void OnContinueGamePressed();
     
     //////////////////////////////////////////////////////////////////////////
     // Base Movement Override
@@ -276,10 +297,22 @@ public:
     /** Used to manipulate with wall ride loop sound */
     UPROPERTY()
     UAudioComponent* WallRideAC;
+
+    /** Sound to play when we slide */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
+    class USoundBase* SlideSound;
+
+    /** Used to manipulate with slide loop sound */
+    UPROPERTY()
+    UAudioComponent* SlideAC;
     
     /** Sound to play when we upgrade a power */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
     class USoundBase* PowerUpgradeSound;
+
+    /** Sound to play when missing stamina */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
+    class USoundBase* MissingStaminaSound;
 
     /** Handles sounds for running */
     void UpdateRunSounds(bool bNewRunning);
@@ -289,6 +322,9 @@ public:
 
     /** Handles sounds for the wall ride */
     void UpdateWallRideSounds(bool bNewIsWallRiding);
+
+    /** Handles sounds for the slide */
+    void UpdateSlideSounds(bool bNewIsSliding);
 
     /** Handles sounds for the wind */
     void UpdateSounds(UAudioComponent* SoundAC, bool bPlaySound);
@@ -347,6 +383,9 @@ public:
 
     /** Function used by the OnUpgradePowerXPressed */
     void UpgradePower(float &PowerId);
+
+    /** */
+    void MissingStamina();
 
 protected:
 	// APawn interface

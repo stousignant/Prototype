@@ -8,6 +8,7 @@
 #include "PrototypeGameMode.h"
 
 // Debug example
+//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("testHitResult.GetComponent() (%s)"), *testHitResult.GetComponent()->GetName()));
 //GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("GetActorRotation (%f,%f,%f)"), GetActorRotation().Vector().X, GetActorRotation().Vector().Y, GetActorRotation().Vector().Z));
 //GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("This is an on screen message!"));
 
@@ -26,8 +27,8 @@ APrototypeCharacter::APrototypeCharacter(const FObjectInitializer& ObjectInitial
     CollectionSphere->SetSphereRadius(250.f);
 
 	// Set turn rates for input
-	BaseTurnRate = 45.0f;
-	BaseLookUpRate = 45.0f;
+	BaseTurnRate = 15.0f;
+	BaseLookUpRate = 15.0f;
 
     // Set movement variables
     bIsRunning = false;
@@ -37,6 +38,7 @@ APrototypeCharacter::APrototypeCharacter(const FObjectInitializer& ObjectInitial
     bIsFast = false;
     StaminaMax = 100.0f;
     StaminaCurrent = StaminaMax;
+    NormalAccel = 3072.0f;
 
     // Set default power values
     RunSpeed = 1500.0f;
@@ -83,6 +85,9 @@ void APrototypeCharacter::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
     
+    // Manage the run
+    UpdateRun(DeltaSeconds);
+
     // Manage the dash
     UpdateDash(DeltaSeconds);
 
@@ -97,6 +102,27 @@ void APrototypeCharacter::Tick(float DeltaSeconds)
 
     // Manage the scanning
     UpdateScan(DeltaSeconds);
+
+    // Manage the slide
+    UpdateSlide(DeltaSeconds);
+}
+
+void APrototypeCharacter::UpdateRun(float DeltaSeconds)
+{
+    if (bIsRunning)
+    {
+        // Make sure the character is grounded and is moving
+        if (!GetCharacterMovement()->IsFalling() && GetCharacterMovement()->Velocity.Size() > WalkSpeed && !bIsDashing && !bIsSliding)
+        {
+            // Play run sound
+            UpdateRunSounds(true);
+        }
+        else
+        {
+            // Stop run sound
+            UpdateRunSounds(false);
+        }
+    }
 }
 
 void APrototypeCharacter::UpdateDash(float DeltaSeconds)
@@ -128,9 +154,11 @@ void APrototypeCharacter::UpdateStamina(float DeltaSeconds)
         // Remove stamina
         float StaminaDrainWithDelta = StaminaDrain * DeltaSeconds * 60.0f;
         StaminaCurrent = (StaminaCurrent - StaminaDrainWithDelta < 0) ? 0 : StaminaCurrent - StaminaDrainWithDelta;
-
+        
         if (StaminaCurrent <= 0)
         {
+            MissingStamina();
+
             bIsDashing = false;
             SetRunning(bIsRunning);
         }
@@ -153,7 +181,20 @@ void APrototypeCharacter::UpdateStamina(float DeltaSeconds)
         {
             StaminaCurrent = (StaminaCurrent + StaminaReplenishWithDelta * 2 > StaminaMax) ? StaminaMax : StaminaCurrent + StaminaReplenishWithDelta * 2;
         }
-    }    
+    }
+    
+    if (MissingStaminaTimer > 0.0f)
+    {
+        // Set missing stamina to true
+        bIsMissingStamina = true;
+
+        // Deduct time
+        MissingStaminaTimer -= DeltaSeconds;
+    }
+    else
+    {
+        bIsMissingStamina = false;
+    }
 }
 
 void APrototypeCharacter::UpdateWallRide(float DeltaSeconds)
@@ -206,7 +247,7 @@ void APrototypeCharacter::UpdateRespawnPoint(float DeltaSeconds)
 {
     // Only update respawn point if in playing mode
     APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-    if (MyGameMode->GetCurrentState() == EPrototypePlayState::EPlaying)
+    if (MyGameMode->GetCurrentState() == EPrototypePlayState::EEarlyGame || MyGameMode->GetCurrentState() == EPrototypePlayState::ELateGame)
     {
         RespawnSaveTimer++;
         if (RespawnSaveTimer >= RespawnSaveDelay && !GetCharacterMovement()->IsFalling())
@@ -265,7 +306,16 @@ void APrototypeCharacter::UpdateScan(float DeltaSeconds)
     // Progress of the scan
     if (bIsScanning)
     {
-        ScanProgress += DeltaSeconds;
+        // If scan is hitting the beam
+        if (testHitResult.GetComponent()->GetName() == "BeamMesh")
+        {
+            ScanProgress += DeltaSeconds / 3;
+        }
+        // If scan is hitting the energy
+        else if (testHitResult.GetComponent()->GetName() == "PickupMesh")
+        {
+            ScanProgress += DeltaSeconds;
+        }
 
         // Scan completed
         if (ScanProgress >= ScanMaximum)
@@ -281,6 +331,21 @@ void APrototypeCharacter::UpdateScan(float DeltaSeconds)
     else
     {
         ScanProgress = 0;
+    }
+}
+
+void APrototypeCharacter::UpdateSlide(float DeltaSeconds)
+{
+    if (bIsSliding)
+    {
+        // Play the slide sound
+        UpdateSlideSounds(true);
+    }
+
+    // If slide is over
+    if (bIsSliding && GetCharacterMovement()->Velocity.Size() <= (RunSpeed / 2))
+    {
+        SetSliding(false);
     }
 }
 
@@ -314,6 +379,7 @@ void APrototypeCharacter::SetupPlayerInputComponent(class UInputComponent* Input
 
     InputComponent->BindAction("ExitGame", IE_Pressed, this, &APrototypeCharacter::OnExitGamePressed);
     InputComponent->BindAction("RestartGame", IE_Pressed, this, &APrototypeCharacter::OnRestartGamePressed);
+    InputComponent->BindAction("ContinueGame", IE_Pressed, this, &APrototypeCharacter::OnContinueGamePressed);
 	
 	InputComponent->BindAxis("MoveForward", this, &APrototypeCharacter::OnMoveForward);
 	InputComponent->BindAxis("MoveRight", this, &APrototypeCharacter::OnMoveRight);
@@ -381,12 +447,16 @@ void APrototypeCharacter::OnJumpPressed()
         {
             // Verify if enough stamina
             if (StaminaCurrent - StaminaDrain * 50 > 0)
-            {
+            {  
                 // Execute jump action
                 bPressedJump = true;
 
                 // Drain stamina from dash jumping
                 StaminaCurrent = (StaminaCurrent - StaminaDrain * 50 < 0) ? 0 : StaminaCurrent - StaminaDrain * 50;
+            }
+            else
+            {
+                MissingStamina();
             }
         }
         else
@@ -419,6 +489,9 @@ void APrototypeCharacter::OnRunReleased()
 {
     // Set the running to false
     SetRunning(false);
+
+    // Stop the run sound
+    UpdateRunSounds(false);
 }
 
 void APrototypeCharacter::SetRunning(bool bNewRunning)
@@ -433,24 +506,20 @@ void APrototypeCharacter::SetRunning(bool bNewRunning)
         GetCharacterMovement()->MaxWalkSpeed = (bIsRunning) ? RunSpeed : RunSpeed / 2;
         GetCharacterMovement()->MaxAcceleration = NormalAccel;
     }
-
-    // Make sure the character is grounded
-    if (!GetCharacterMovement()->IsFalling())
-    {
-        // Play run sound
-        UpdateRunSounds(bNewRunning);
-    }
 }
 
 void APrototypeCharacter::OnDashPressed()
 {
     if (!bMovementBlocked)
     {
+        // Super jump
         if (GetCharacterMovement()->IsFalling())
         {
             // Verify if enough stamina
             if (StaminaCurrent - StaminaDrain * 50 < 0)
             {
+                MissingStamina();
+
                 // Cancel dash
                 return;
             }
@@ -460,11 +529,6 @@ void APrototypeCharacter::OnDashPressed()
                 StaminaCurrent = (StaminaCurrent - StaminaDrain * 50 < 0) ? 0 : StaminaCurrent - StaminaDrain * 50;
             }            
         }
-
-        bIsRunning = false;
-
-        // Stop the run sound
-        UpdateRunSounds(false);
 
         bIsDashing = true;        
 
@@ -486,6 +550,8 @@ void APrototypeCharacter::OnDivePressed()
     // Verify if enough stamina
     if (StaminaCurrent - StaminaDrain * 25 < 0)
     {
+        MissingStamina();
+
         // Cancel dive
         return;
     }
@@ -504,18 +570,54 @@ void APrototypeCharacter::OnDivePressed()
 
 void APrototypeCharacter::OnCrouchPressed()
 {
+    // Crouch the character
     GetCharacterMovement()->bWantsToCrouch = !GetCharacterMovement()->IsCrouching();
 
-    if (GetCharacterMovement()->bWantsToCrouch && GetCharacterMovement()->Velocity.Size() > (RunSpeed / 2))
+    /* Slide */
+    // In order to slide, must press crouch, not be walking (1.9f), and grounded
+    if (GetCharacterMovement()->bWantsToCrouch && GetCharacterMovement()->Velocity.Size() > (RunSpeed / 1.9f) && !GetCharacterMovement()->IsFalling())
+    {
+        // Verify if enough stamina
+        if (StaminaCurrent - StaminaDrain * 25 < 0)
+        {
+            MissingStamina();
+
+            // Cancel slide
+            return;
+        }
+        else
+        {
+            // Drain stamina from slide
+            StaminaCurrent = (StaminaCurrent - StaminaDrain * 25 < 0) ? 0 : StaminaCurrent - StaminaDrain * 25;
+        }
+
+        SetSliding(true);        
+    }
+
+    if (bIsSliding && GetCharacterMovement()->IsCrouching())
+    {
+        SetSliding(false);
+    }
+}
+
+void APrototypeCharacter::SetSliding(bool bNewSliding)
+{
+    // Set slide state
+    bIsSliding = bNewSliding;
+
+    if (bIsSliding)
     {
         // Block movement in order to perform a slide
         bMovementBlocked = true;
 
         // Change the ground friction in order to simulate a sliding effect
-        GetCharacterMovement()->GroundFriction = 0.5f;
+        GetCharacterMovement()->GroundFriction = 0.25f;
 
         // Give the character a small boost
         GetCharacterMovement()->Velocity += FVector(GetActorRotation().Vector().X * RunSpeed, GetActorRotation().Vector().Y * RunSpeed, 0);
+
+        // Stop the run sound
+        UpdateRunSounds(false);
     }
     else
     {
@@ -524,6 +626,9 @@ void APrototypeCharacter::OnCrouchPressed()
 
         // Set the ground friction back to default
         GetCharacterMovement()->GroundFriction = 8.f;
+
+        // Stop the slide sound
+        UpdateSlideSounds(false);
     }
 }
 
@@ -616,6 +721,26 @@ void APrototypeCharacter::OnRestartGamePressed()
     GetWorld()->GetFirstPlayerController()->ConsoleCommand("restartlevel");
 }
 
+void APrototypeCharacter::OnContinueGamePressed()
+{
+    // Only allow to continue if in GameWon state
+    APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+    if (MyGameMode->GetCurrentState() == EPrototypePlayState::EGameWon)
+    {
+        // Enter the late game
+        MyGameMode->SetCurrentState(EPrototypePlayState::ELateGame);
+    }
+}
+
+void APrototypeCharacter::MissingStamina()
+{
+    // Show missing stamina for 2 seconds
+    MissingStaminaTimer = 2.0f;
+
+    // Play missing stamina sound
+    UGameplayStatics::PlaySoundAtLocation(this, MissingStaminaSound, GetActorLocation());
+}
+
 
 //////////////////////////////////////////////////////////////////////////
 // Base Movement Override
@@ -667,7 +792,7 @@ void APrototypeCharacter::UpdateRunSounds(bool bNewRunning)
             }
         }
         // If the run audio component exists
-        else if (RunAC)
+        else if (RunAC && !RunAC->IsPlaying())
         {
             // Play the run sound
             RunAC->Play();
@@ -698,7 +823,7 @@ void APrototypeCharacter::UpdateWindSounds(bool bNewIsFast)
                 WindAC->bAutoDestroy = false;
             }
         }
-        else if (WindAC)
+        else if (WindAC && !WindAC->IsPlaying())
         {
             WindAC->Play();
         }
@@ -736,6 +861,34 @@ void APrototypeCharacter::UpdateWallRideSounds(bool bNewIsWallRiding)
         if (WallRideAC)
         {
             WallRideAC->Stop();
+        }
+    }
+}
+
+void APrototypeCharacter::UpdateSlideSounds(bool bNewIsSliding)
+{
+    if (bNewIsSliding)
+    {
+        // If the wall ride audio component isn't created yet
+        if (!SlideAC && SlideSound)
+        {
+            // Initialize the run audio component
+            SlideAC = UGameplayStatics::PlaySoundAttached(SlideSound, GetRootComponent());
+            if (SlideAC)
+            {
+                SlideAC->bAutoDestroy = false;
+            }
+        }
+        else if (SlideAC && !SlideAC->IsPlaying())
+        {
+            SlideAC->Play();
+        }
+    }
+    else
+    {
+        if (SlideAC)
+        {
+            SlideAC->Stop();
         }
     }
 }

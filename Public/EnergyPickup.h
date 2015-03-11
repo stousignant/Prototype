@@ -15,6 +15,10 @@ public:
     // Constructor
     AEnergyPickup(const FObjectInitializer& ObjectInitializer);
 
+    // Static mesh component to represent the beam in the level
+    UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = Pickup)
+    UStaticMeshComponent* BeamMesh;
+
     //////////////////////////////////////////////////////////////////////////
     // Update
     /** Tick */

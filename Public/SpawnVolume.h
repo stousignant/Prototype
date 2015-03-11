@@ -47,11 +47,18 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
     float SpawnDelayDecrement;
 
+    /** Spawn distance increment */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
+    float SpawnDistanceIncrement;
+
     /** Counter to keep track of the number of object spawned */
     float SpawnCounter;
 
     /** Last random location generated */
     FVector LastRandomLocation;
+
+    /** Is first spawn */
+    bool bIsFirstSpawn;
 
     virtual void Tick(float DeltaSeconds) override;
 
