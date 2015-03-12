@@ -76,4 +76,7 @@ private:
     /** The timer for when to spawn the pickup */
     float SpawnTime;
 
+    /** Generate random position */
+    void GenerateRandomLocation();
+
 };

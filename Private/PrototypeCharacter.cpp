@@ -752,8 +752,19 @@ void APrototypeCharacter::OnLanded(const FHitResult& Hit)
     // Parent call
     Super::OnLanded(Hit);
 
+    // Calculate land sound volume multiplier
+    float LandVolumeMultiplier;
+    if (GetCharacterMovement()->Velocity.Z / FallSpeed * -1 > 1.0f)
+    {
+        LandVolumeMultiplier = 1.0f;
+    }
+    else
+    {
+        LandVolumeMultiplier = GetCharacterMovement()->Velocity.Z / FallSpeed * -1;
+    }
+
     // Play land sound
-    UGameplayStatics::PlaySoundAtLocation(this, LandSound, GetActorLocation(), -1 * GetCharacterMovement()->Velocity.Z / FallSpeed);
+    UGameplayStatics::PlaySoundAtLocation(this, LandSound, GetActorLocation(), LandVolumeMultiplier);
 
     // If player is currently holding shift
     if (bIsRunning)

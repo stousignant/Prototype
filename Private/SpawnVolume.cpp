@@ -19,10 +19,10 @@ ASpawnVolume::ASpawnVolume(const FObjectInitializer& ObjectInitializer) : Super(
     RootComponent = WhereToSpawn;
 
     // Set the spawn delay range and get the first SpawnDelay
-    SpawnDelay = 40.0f;
+    SpawnDelay = 35.0f;
     
     // Set the default speed level for the spawning objects
-    SpawnedSpeedLevel = 20.0f;
+    SpawnedSpeedLevel = 15.0f;
 
     // Set the default speed increment
     SpeedIncrement = 1.0f;
@@ -92,16 +92,13 @@ void ASpawnVolume::SpawnPickup()
 FVector ASpawnVolume::GetRandomPointInVolume()
 {
     FVector RandomLocation;
-    float MinX, MinY, MinZ;
-    float MaxX, MaxY, MaxZ;
-
     FVector Origin;
     FVector BoxExtent;
 
     // Get the SpawnVolume's origin and box extent
     Origin = WhereToSpawn->Bounds.Origin;
     BoxExtent = WhereToSpawn->Bounds.BoxExtent;
-
+    
     // Is the first spawn
     if (bIsFirstSpawn)
     {
@@ -116,26 +113,32 @@ FVector ASpawnVolume::GetRandomPointInVolume()
     // All other spawn, be random
     else
     {
-        do
+        // If early game, spawn close
+        APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+        if (MyGameMode->GetCurrentState() == EPrototypePlayState::EEarlyGame)
         {
-            // Calculate the minimum X, Y, and Z
-            MinX = Origin.X - BoxExtent.X;
-            MinY = Origin.Y - BoxExtent.Y;
-            MinZ = Origin.Z;
+            do
+            {
+                // The random spawn location will fall between the min and max X, Y, and Z
+                RandomLocation.X = FMath::FRandRange(Origin.X - BoxExtent.X, Origin.X + BoxExtent.X);
+                RandomLocation.Y = FMath::FRandRange(Origin.Y - BoxExtent.Y, Origin.Y + BoxExtent.Y);
+                RandomLocation.Z = FMath::FRandRange(Origin.Z, Origin.Z);
 
-            // Calculate the maximum X, Y, and Z
-            MaxX = Origin.X + BoxExtent.X;
-            MaxY = Origin.Y + BoxExtent.Y;
-            MaxZ = Origin.Z;
+            } while (FVector::Dist(LastRandomLocation, RandomLocation) > (SpawnDistance * 1.5f) && FVector::Dist(LastRandomLocation, RandomLocation) < (SpawnDistance / 2));
+        }
+        else
+        {
+            do
+            {
+                // The random spawn location will fall between the min and max X, Y, and Z
+                RandomLocation.X = FMath::FRandRange(Origin.X - BoxExtent.X, Origin.X + BoxExtent.X);
+                RandomLocation.Y = FMath::FRandRange(Origin.Y - BoxExtent.Y, Origin.Y + BoxExtent.Y);
+                RandomLocation.Z = FMath::FRandRange(Origin.Z, Origin.Z);
 
-            // The random spawn location will fall between the min and max X, Y, and Z
-            RandomLocation.X = FMath::FRandRange(MinX, MaxX);
-            RandomLocation.Y = FMath::FRandRange(MinY, MaxY);
-            RandomLocation.Z = FMath::FRandRange(MinZ, MaxZ);
-
-        } while (FVector::Dist(LastRandomLocation, RandomLocation) < SpawnDistance);
+            } while (FVector::Dist(LastRandomLocation, RandomLocation) < SpawnDistance);
+        }        
     }    
-    
+        
     // Return the random spawn location
     LastRandomLocation = RandomLocation;
     return RandomLocation;

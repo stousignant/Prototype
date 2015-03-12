@@ -23,7 +23,11 @@ void AMusicPlayer::PlayMusic(EPrototypePlayState NewState)
     //
     case EPrototypePlayState::EEarlyGame:
     {
-        TutorialMusicAC->Stop();
+        // Stop the current song
+        if (TutorialMusicAC && TutorialMusicAC->IsPlaying())
+        {
+            TutorialMusicAC->Stop();
+        }        
 
         EarlyGameMusicAC = UGameplayStatics::PlaySoundAttached(EarlyGameMusic, MyCharacter->GetRootComponent());
         EarlyGameMusicAC->Play();
@@ -32,8 +36,15 @@ void AMusicPlayer::PlayMusic(EPrototypePlayState NewState)
     //
     case EPrototypePlayState::EGameOver:
     {
-        EarlyGameMusicAC->Stop();
-        LateGameMusicAC->Stop();
+        // Stop the current song
+        if (EarlyGameMusicAC && EarlyGameMusicAC->IsPlaying())
+        {
+            EarlyGameMusicAC->Stop();
+        }
+        if (LateGameMusicAC && LateGameMusicAC->IsPlaying())
+        {
+            LateGameMusicAC->Stop();
+        }
 
         GameOverMusicAC = UGameplayStatics::PlaySoundAttached(GameOverMusic, MyCharacter->GetRootComponent());
         GameOverMusicAC->Play();
@@ -42,7 +53,11 @@ void AMusicPlayer::PlayMusic(EPrototypePlayState NewState)
     //
     case EPrototypePlayState::EGameWon:
     {
-        EarlyGameMusicAC->Stop();
+        // Stop the current song
+        if (EarlyGameMusicAC && EarlyGameMusicAC->IsPlaying())
+        {
+            EarlyGameMusicAC->Stop();
+        }
 
         GameWonMusicAC = UGameplayStatics::PlaySoundAttached(GameWonMusic, MyCharacter->GetRootComponent());
         GameWonMusicAC->Play();
@@ -51,7 +66,12 @@ void AMusicPlayer::PlayMusic(EPrototypePlayState NewState)
     //
     case EPrototypePlayState::ELateGame:
     {
-        GameWonMusicAC->Stop();
+        // Stop the current song
+        if (GameWonMusicAC && GameWonMusicAC->IsPlaying())
+        {
+            GameWonMusicAC->Stop();
+
+        }
 
         LateGameMusicAC = UGameplayStatics::PlaySoundAttached(LateGameMusic, MyCharacter->GetRootComponent());
         LateGameMusicAC->Play();

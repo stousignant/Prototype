@@ -21,7 +21,7 @@ void ADeathFloor::Tick(float DeltaSeconds)
     // Get all overlapping Actors and store them in a CollectedActors array
     TArray<AActor*> CollectedActors;
     DeathFloorCollider->GetOverlappingActors(CollectedActors);
-        
+    
     // For each actor collected
     for (int32 iCollected = 0; iCollected < CollectedActors.Num(); ++iCollected)
     {

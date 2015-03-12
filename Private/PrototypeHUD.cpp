@@ -16,7 +16,6 @@ APrototypeHUD::APrototypeHUD(const FObjectInitializer& ObjectInitializer) : Supe
     HUDFont = HUDFontOb.Object;
 }
 
-
 void APrototypeHUD::DrawHUD()
 {
     // Parent call
@@ -58,7 +57,7 @@ void APrototypeHUD::DrawPlayerInfo()
     FString SpeedString = FString::Printf(TEXT("Speed  %0.f"), MyCharacter->GetVelocity().Size());
     FVector2D SpeedStringSize;
     GetTextSize(SpeedString, SpeedStringSize.X, SpeedStringSize.Y, HUDFont);
-    DrawText(SpeedString, FColor::Cyan, (ScreenDimensions.X / 3.2f), (ScreenDimensions.Y / 3.0f), HUDFont);
+    DrawText(SpeedString, FColor::Yellow, (ScreenDimensions.X / 3.2f), (ScreenDimensions.Y / 3.0f), HUDFont);
 
     // Print stamina
     FString StaminaString = FString::Printf(TEXT("Stamina %0.f"), MyCharacter->StaminaCurrent);
@@ -127,13 +126,13 @@ void APrototypeHUD::DrawGameInfo()
     APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
     
     // Print the energy count
-    FString EnergyCountString = FString::Printf(TEXT("%0.0f/%0.0f Energy"), MyGameMode->GetEnergyCount(), MyGameMode->EnergyMax);
+    FString EnergyCountString = FString::Printf(TEXT("%0.0f/%0.0f Energy absorbed"), MyGameMode->GetEnergyCount(), MyGameMode->EnergyMax);
     FVector2D EnergyCountStringSize;
     GetTextSize(EnergyCountString, EnergyCountStringSize.X, EnergyCountStringSize.Y, HUDFont);
-    DrawText(EnergyCountString, FColor::Yellow, (ScreenDimensions.X / 1.6f), (ScreenDimensions.Y / 3.0f), HUDFont);
+    DrawText(EnergyCountString, FColor::Cyan, (ScreenDimensions.X / 1.6f), (ScreenDimensions.Y / 3.0f), HUDFont);
 
     // Print the explosion count
-    FString ExplosionCountString = FString::Printf(TEXT("%0.0f/%0.0f Explosion"), MyGameMode->GetExplosionCount(), MyGameMode->ExplosionMax);
+    FString ExplosionCountString = FString::Printf(TEXT("%0.0f Planet lives"), MyGameMode->ExplosionMax - MyGameMode->GetExplosionCount());
     FVector2D ExplosionCountStringSize;
     GetTextSize(ExplosionCountString, ExplosionCountStringSize.X, ExplosionCountStringSize.Y, HUDFont);
     DrawText(ExplosionCountString, FColor::Red, (ScreenDimensions.X / 1.6f), (ScreenDimensions.Y / 3.0f) + EnergyCountStringSize.Y, HUDFont);
@@ -149,11 +148,11 @@ void APrototypeHUD::DrawScan()
     {
         // Scanning HUD
         float ScanPourcentage = (MyCharacter->ScanProgress / MyCharacter->ScanMaximum) * 100;
-        FString ScanProgressString = FString::Printf(TEXT("Scanning (%.1f)"), ScanPourcentage);
+        FString ScanProgressString = FString::Printf(TEXT("Absorbing energy (%.1f)"), ScanPourcentage);
         FVector2D ScanProgressSize;
         GetTextSize(ScanProgressString, ScanProgressSize.X, ScanProgressSize.Y, HUDFont);
-        DrawText(ScanProgressString, FColor::Cyan, (ScreenDimensions.X - ScanProgressSize.X) / 2.0f, (ScreenDimensions.Y - ScanProgressSize.Y) / 1.7f, HUDFont);
-        DrawRect(FColor::Cyan, (ScreenDimensions.X - MyCharacter->ScanProgress * 60.0f) / 2.0f, (ScreenDimensions.Y + 10) / 1.65f, MyCharacter->ScanProgress * 60.0f, 10);
+        DrawText(ScanProgressString, FColor::Cyan, (ScreenDimensions.X - ScanProgressSize.X) / 2.0f, (ScreenDimensions.Y - ScanProgressSize.Y) / 1.75f, HUDFont);
+        DrawRect(FColor::Cyan, (ScreenDimensions.X - MyCharacter->ScanProgress * 60.0f) / 2.0f, (ScreenDimensions.Y + 10) / 1.7f, MyCharacter->ScanProgress * 60.0f, 10);
     }    
 }
 

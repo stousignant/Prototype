@@ -52,6 +52,9 @@ void APowerPickup::ReceiveHit(
 
         // Increment character stats
         TestCharacter->StatsCount++;
+
+        // Full stamina
+        TestCharacter->StaminaCurrent = TestCharacter->StaminaMax;
     }
 }
 
