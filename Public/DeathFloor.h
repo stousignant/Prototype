@@ -18,8 +18,21 @@ public:
     // Update
     virtual void Tick(float DeltaSeconds) override;
 
+    // Timer delay
+    float TimerDelay;
+
     /** BoxComponent to specify the death area */
     UPROPERTY(VisibleInstanceOnly, Category = Gameplay)
     UBoxComponent* DeathFloorCollider;
+
+    /** Override the ReceiveHit function */
+    virtual void ReceiveHit(class UPrimitiveComponent* MyComp,
+        AActor* Other,
+        class UPrimitiveComponent* OtherComp,
+        bool bSelfMoved,
+        FVector HitLocation,
+        FVector HitNormal,
+        FVector NormalImpulse,
+        const FHitResult & Hit) override;
 	
 };

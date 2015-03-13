@@ -57,6 +57,24 @@ public:
 
     /** Override function used when game is launched */
     virtual void BeginPlay() override;
+
+    /** Time elapsed during the tutorial */
+    float TutorialCurrentTimeAttack;
+
+    /** Best time for tutorial time attack */
+    float TutorialBestTimeAttack;
+
+    /** Show the time attack result for secs */
+    float TutorialTimeAttackTimer;
+
+    /** Should show tutorial time attack */
+    bool bShowTutorialTimeAttack;
+
+    /** Show the planet life loss warning for secs */
+    float ExplosionWarningTimer;
+
+    /** Should show planet life loss warning */
+    bool bShowExplosionWarning;
     
 private:
 

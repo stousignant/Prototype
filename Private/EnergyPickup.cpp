@@ -2,6 +2,7 @@
 #include "EnergyPickup.h"
 #include "PrototypeGameMode.h"
 #include "Engine.h"
+#include "SpawnVolume.h"
 
 AEnergyPickup::AEnergyPickup(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -42,6 +43,33 @@ void AEnergyPickup::OnPickedUp_Implementation()
 
     // Destroy the energy
     Destroy();
+
+    // If early game, adjust spawn delay
+    if (MyGameMode->GetCurrentState() == EPrototypePlayState::EEarlyGame)
+    {
+        // Find the spawn volume
+        TArray<AActor*> FoundSpawnVolumeActors;
+        UGameplayStatics::GetAllActorsOfClass(GetWorld(), ASpawnVolume::StaticClass(), FoundSpawnVolumeActors);
+
+        // Enable spawning for each spawn volume
+        for (auto Actor : FoundSpawnVolumeActors)
+        {
+            ASpawnVolume* SpawnVolumeActor = Cast<ASpawnVolume>(Actor);
+            if (SpawnVolumeActor)
+            {
+                // Find other energy pickups
+                TArray<AActor*> FoundEnergyPickupActors;
+                UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnergyPickup::StaticClass(), FoundEnergyPickupActors);
+
+                // If it was the only energy pickup in the arena
+                if (FoundEnergyPickupActors.Num() == 0)
+                {
+                    // Adjust the spawn delay based on the player's skills
+                    SpawnVolumeActor->AdjustSpawnDelay();
+                }                
+            }
+        }
+    }    
 }
 
 void AEnergyPickup::Explode()

@@ -12,7 +12,7 @@
 //GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("GetActorRotation (%f,%f,%f)"), GetActorRotation().Vector().X, GetActorRotation().Vector().Y, GetActorRotation().Vector().Z));
 //GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("This is an on screen message!"));
 
-const int MAX_LEVEL = 4;
+const int MAX_LEVEL = 7;
 
 //////////////////////////////////////////////////////////////////////////
 // APrototypeCharacter
@@ -24,11 +24,37 @@ APrototypeCharacter::APrototypeCharacter(const FObjectInitializer& ObjectInitial
     // Create battery collection volume
     CollectionSphere = ObjectInitializer.CreateDefaultSubobject<USphereComponent>(this, TEXT("CollectionSphere"));
     CollectionSphere->AttachTo(RootComponent); // in order to follow our character
-    CollectionSphere->SetSphereRadius(250.f);
+    CollectionSphere->SetSphereRadius(5000.f);
 
 	// Set turn rates for input
 	BaseTurnRate = 15.0f;
 	BaseLookUpRate = 15.0f;
+
+    // Set scan variables
+    bIsScanning = false;
+    ScanMaximum = 1.0f; // in seconds
+    EnergyCount = 0.0f;
+    ScanOffset1 = 100.0f;
+    ScanOffset2 = 10.0f;
+
+    // Set power variables
+    SpeedPowerDefault = 1500.0f;
+    SpeedPowerLevel = 1.0f;
+    SpeedPowerIncrement = 300.0f;
+    AccelerationPowerDefault = 3000.0f;
+    AccelerationPowerIncrement = 1000.0f;
+    JumpPowerDefault = 1800.0f;
+    JumpPowerLevel = 1.0f;
+    JumpPowerIncrement = 250.0f;
+    StaminaPowerDefault = 1.0f;
+    StaminaPowerLevel = 1.0f;
+    StaminaPowerIncrement = 0.15f;
+    PowerupDetectionTimer = 0.0f;
+
+    // Set default power values
+    RunSpeed = SpeedPowerDefault;
+    GetCharacterMovement()->JumpZVelocity = JumpPowerDefault;
+    StaminaDrain = StaminaPowerDefault;
 
     // Set movement variables
     bIsRunning = false;
@@ -38,24 +64,8 @@ APrototypeCharacter::APrototypeCharacter(const FObjectInitializer& ObjectInitial
     bIsFast = false;
     StaminaMax = 100.0f;
     StaminaCurrent = StaminaMax;
-    NormalAccel = 3072.0f;
-
-    // Set default power values
-    RunSpeed = 1500.0f;
-    GetCharacterMovement()->JumpZVelocity = 1800.0f;
-    StaminaDrain = 1.0f;
-    
-    // Set scan variables
-    bIsScanning = false;
-    ScanMaximum = 2.0f; // in seconds
-    EnergyCount = 0.0f;
-    ScanOffset1 = 100.0f;
-    ScanOffset2 = 10.0f;
-
-    // Set power variables
-    SpeedPowerLevel = 1.0f;
-    JumpPowerLevel = 1.0f;
-    StaminaPowerLevel = 1.0f;
+    NormalAccel = AccelerationPowerDefault;
+    WallRideDistance = 1000.0f;
 
     // Set misc variables
     WindControlModifier = 3999;
@@ -105,6 +115,14 @@ void APrototypeCharacter::Tick(float DeltaSeconds)
 
     // Manage the slide
     UpdateSlide(DeltaSeconds);
+
+    // Manage the powerup detection
+    UpdatePowerupDetection(DeltaSeconds);
+
+
+    // TEST DEBUG
+    //FVector AimStartingPoint = GetActorLocation() + CameraRelativePosition;
+    //DrawDebugLine(GetWorld(), AimStartingPoint + FVector(0, 0, -5), GetActorLocation() + GetCharacterMovement()->GetLastInputVector() * WallRideDistance, FColor(255,255,255));
 }
 
 void APrototypeCharacter::UpdateRun(float DeltaSeconds)
@@ -207,7 +225,7 @@ void APrototypeCharacter::UpdateWallRide(float DeltaSeconds)
     TraceParams.bReturnPhysicalMaterial = false;
 
     // Perform a trace from the player's position to the input direction
-    if (GetWorld()->LineTraceSingle(testHitResult, GetActorLocation(), GetActorLocation() + GetCharacterMovement()->GetLastInputVector() * 100, ECC_WorldStatic, TraceParams))
+    if (GetWorld()->LineTraceSingle(testHitResult, GetActorLocation(), GetActorLocation() + GetCharacterMovement()->GetLastInputVector() * WallRideDistance, ECC_WorldStatic, TraceParams))
     {
         // If the trace has hit a wall
         if (testHitResult.GetActor() && testHitResult.GetComponent()->GetMaterial(0) == WallJumpMaterial)
@@ -306,17 +324,17 @@ void APrototypeCharacter::UpdateScan(float DeltaSeconds)
     // Progress of the scan
     if (bIsScanning)
     {
-        // If scan is hitting the beam
-        if (testHitResult.GetComponent()->GetName() == "BeamMesh")
-        {
-            ScanProgress += DeltaSeconds / 3;
-        }
         // If scan is hitting the energy
-        else if (testHitResult.GetComponent()->GetName() == "PickupMesh")
+        if (testHitResult.GetComponent()->GetName() == "PickupMesh")
         {
-            ScanProgress += DeltaSeconds;
+            ScanProgress += DeltaSeconds * 1.5f;
         }
-
+        // If scan is hitting the beam
+        else if (testHitResult.GetComponent()->GetName() == "BeamMesh")
+        {
+            ScanProgress += DeltaSeconds / 3.0f;
+        }
+        
         // Scan completed
         if (ScanProgress >= ScanMaximum)
         {
@@ -346,6 +364,34 @@ void APrototypeCharacter::UpdateSlide(float DeltaSeconds)
     if (bIsSliding && GetCharacterMovement()->Velocity.Size() <= (RunSpeed / 2))
     {
         SetSliding(false);
+    }
+}
+
+void APrototypeCharacter::UpdatePowerupDetection(float DeltaSeconds)
+{
+    PowerupDetectionTimer += DeltaSeconds;
+
+    // Execute detection each 0.5 second
+    if (PowerupDetectionTimer > 0.5f)
+    {
+        PowerupDetectedCount = 0.0f;
+
+        // Get all overlapping Actors and store them in a CollectedActors array
+        TArray<AActor*> CollectedActors;
+        CollectionSphere->GetOverlappingActors(CollectedActors);
+
+        // For each actor collected
+        for (int32 iCollected = 0; iCollected < CollectedActors.Num(); ++iCollected)
+        {
+            // Cast the collected actor to APowerPickup
+            APowerPickup* const TestPowerup = Cast<APowerPickup>(CollectedActors[iCollected]);
+
+            // if the cast is successful, and the powerup is valid and active
+            if (TestPowerup && !TestPowerup->IsPendingKill() && TestPowerup->bIsActive)
+            {
+                PowerupDetectedCount++;
+            }
+        }
     }
 }
 
@@ -533,7 +579,8 @@ void APrototypeCharacter::OnDashPressed()
         bIsDashing = true;        
 
         // Changing the character's movement speed & acceleration
-        GetCharacterMovement()->MaxWalkSpeed = RunSpeed * 2;
+        //GetCharacterMovement()->MaxWalkSpeed = RunSpeed * 2;
+        GetCharacterMovement()->MaxWalkSpeed = (bIsWallRiding) ? RunSpeed * 4 : RunSpeed * 2;
         GetCharacterMovement()->MaxAcceleration = DashAccel;           
     }
 }
@@ -547,6 +594,9 @@ void APrototypeCharacter::OnDashReleased()
 
 void APrototypeCharacter::OnDivePressed()
 {
+    // If dead, cannot dive
+    if (bIsDead){return;}
+
     // Verify if enough stamina
     if (StaminaCurrent - StaminaDrain * 25 < 0)
     {
@@ -565,7 +615,7 @@ void APrototypeCharacter::OnDivePressed()
     GetPawnPhysicsVolume()->TerminalVelocity = DiveSpeed;
 
     // Add a force downward
-    GetCharacterMovement()->Velocity += FVector(0, 0, -10000);
+    GetCharacterMovement()->Velocity += FVector(0, 0, RunSpeed * -3);
 }
 
 void APrototypeCharacter::OnCrouchPressed()
@@ -646,19 +696,11 @@ void APrototypeCharacter::OnUpgradePower1Pressed()
 {
     UpgradePower(SpeedPowerLevel);
 
-    if (SpeedPowerLevel == 2)
-    {
-        RunSpeed = 2000.0f;
-    }
-    else if (SpeedPowerLevel == 3)
-    {
-        RunSpeed = 2500.0f;
-    }
-    else if (SpeedPowerLevel == 4)
-    {
-        RunSpeed = 3000.0f;
-    }
-
+    // Set new speed value
+    RunSpeed = SpeedPowerDefault + ((SpeedPowerLevel - 1) * SpeedPowerIncrement);
+    NormalAccel = AccelerationPowerDefault + ((SpeedPowerLevel - 1) * AccelerationPowerIncrement);
+    GetCharacterMovement()->MaxAcceleration = NormalAccel;
+    
     // Update speed
     GetCharacterMovement()->MaxWalkSpeed = (bIsRunning) ? RunSpeed : RunSpeed / 2;
 }
@@ -667,44 +709,35 @@ void APrototypeCharacter::OnUpgradePower2Pressed()
 {
     UpgradePower(JumpPowerLevel);
 
-    if (JumpPowerLevel == 2)
-    {
-        GetCharacterMovement()->JumpZVelocity = 2200.0f;
-    }
-    else if (JumpPowerLevel == 3)
-    {
-        GetCharacterMovement()->JumpZVelocity = 2600.0f;
-    }
-    else if (JumpPowerLevel == 4)
-    {
-        GetCharacterMovement()->JumpZVelocity = 3000.0f;
-    }
+    // Set new jump velocity value
+    GetCharacterMovement()->JumpZVelocity = JumpPowerDefault + ((JumpPowerLevel - 1) * JumpPowerIncrement);
 }
 
 void APrototypeCharacter::OnUpgradePower3Pressed()
 {
     UpgradePower(StaminaPowerLevel);
 
-    if (StaminaPowerLevel == 2)
-    {
-        StaminaDrain = 0.75f;
-    }
-    else if (StaminaPowerLevel == 3)
-    {
-        StaminaDrain = 0.5f;
-    }
-    else if (StaminaPowerLevel == 4)
-    {
-        StaminaDrain = 0.25f;
-    }
+    // Set new stamina drain value
+    StaminaDrain = StaminaPowerDefault - ((StaminaPowerLevel - 1) * StaminaPowerIncrement);
 }
 
 void APrototypeCharacter::UpgradePower(float &PowerId)
 {
     if (StatsCount > 0 && PowerId < MAX_LEVEL)
     {
+        // Level up stat
         PowerId++;
+
+        // Reduce stat available
         StatsCount--;
+
+        // Play upgrade sound
+        UGameplayStatics::PlaySoundAtLocation(this, PowerUpgradeSound, GetActorLocation());
+    }
+    else if (bIsHackingPowerups)
+    {
+        // Level up stat or set it to 1 if over maximum
+        PowerId = (PowerId < MAX_LEVEL) ? PowerId + 1 : PowerId = 1;
 
         // Play upgrade sound
         UGameplayStatics::PlaySoundAtLocation(this, PowerUpgradeSound, GetActorLocation());
@@ -739,6 +772,11 @@ void APrototypeCharacter::MissingStamina()
 
     // Play missing stamina sound
     UGameplayStatics::PlaySoundAtLocation(this, MissingStaminaSound, GetActorLocation());
+}
+
+void APrototypeCharacter::HackPO()
+{
+    bIsHackingPowerups = true;
 }
 
 

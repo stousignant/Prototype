@@ -54,7 +54,7 @@ void APrototypeHUD::DrawPlayerInfo()
     APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
 
     // Print speed
-    FString SpeedString = FString::Printf(TEXT("Speed  %0.f"), MyCharacter->GetVelocity().Size());
+    FString SpeedString = FString::Printf(TEXT("Speed  %0.1f km/h"), MyCharacter->GetVelocity().Size() / 100);
     FVector2D SpeedStringSize;
     GetTextSize(SpeedString, SpeedStringSize.X, SpeedStringSize.Y, HUDFont);
     DrawText(SpeedString, FColor::Yellow, (ScreenDimensions.X / 3.2f), (ScreenDimensions.Y / 3.0f), HUDFont);
@@ -71,7 +71,7 @@ void APrototypeHUD::DrawPlayerInfo()
         FString MissingStaminaString = FString::Printf(TEXT("Missing Stamina"));
         FVector2D MissingStaminaStringSize;
         GetTextSize(MissingStaminaString, MissingStaminaStringSize.X, MissingStaminaStringSize.Y, HUDFont);
-        DrawText(MissingStaminaString, FColor::Red, (ScreenDimensions.X / 3.2f), (ScreenDimensions.Y / 3.0f) + SpeedStringSize.Y + StaminaStringSize.Y, HUDFont);
+        DrawText(MissingStaminaString, FColor::Red, (ScreenDimensions.X - MissingStaminaStringSize.X) / 2.0f, (ScreenDimensions.Y - MissingStaminaStringSize.Y) / 2.0f, HUDFont);
     }
 
     // Print respawn
@@ -80,8 +80,28 @@ void APrototypeHUD::DrawPlayerInfo()
         FString RespawnString = FString::Printf(TEXT("Respawning"));
         FVector2D RespawnStringSize;
         GetTextSize(RespawnString, RespawnStringSize.X, RespawnStringSize.Y, HUDFont);
-        DrawText(RespawnString, FColor::Cyan, (ScreenDimensions.X - RespawnStringSize.X) / 2.0f, (ScreenDimensions.Y - RespawnStringSize.Y) / 2.3f, HUDFont);
+        DrawText(RespawnString, FColor::Cyan, (ScreenDimensions.X - RespawnStringSize.X) / 2.0f, (ScreenDimensions.Y - RespawnStringSize.Y) / 2.45f, HUDFont);
     }
+
+    // Print powerup detection
+    if (MyCharacter->PowerupDetectedCount > 0)
+    {
+        FString PowerupDetectedCountString = FString::Printf(TEXT("%0.f Powerup(s) detected"), MyCharacter->PowerupDetectedCount);
+        FVector2D PowerupDetectedCountStringSize;
+        GetTextSize(PowerupDetectedCountString, PowerupDetectedCountStringSize.X, PowerupDetectedCountStringSize.Y, HUDFont);
+        DrawText(PowerupDetectedCountString, FColor::Blue, (ScreenDimensions.X / 1.4f) - PowerupDetectedCountStringSize.X, (ScreenDimensions.Y / 1.5f), HUDFont);
+    }
+
+    // Print if crouch
+    if (MyCharacter->bIsCrouched)
+    {
+        FString CrouchString = FString::Printf(TEXT("Crouched"));
+        FVector2D CrouchStringSize;
+        GetTextSize(CrouchString, CrouchStringSize.X, CrouchStringSize.Y, HUDFont);
+        DrawText(CrouchString, FColor::Red, (ScreenDimensions.X / 1.4f) - CrouchStringSize.X, (ScreenDimensions.Y / 1.57f), HUDFont);
+    }
+
+    
 }
 
 void APrototypeHUD::DrawPlayerPowers()
@@ -129,13 +149,43 @@ void APrototypeHUD::DrawGameInfo()
     FString EnergyCountString = FString::Printf(TEXT("%0.0f/%0.0f Energy absorbed"), MyGameMode->GetEnergyCount(), MyGameMode->EnergyMax);
     FVector2D EnergyCountStringSize;
     GetTextSize(EnergyCountString, EnergyCountStringSize.X, EnergyCountStringSize.Y, HUDFont);
-    DrawText(EnergyCountString, FColor::Cyan, (ScreenDimensions.X / 1.6f), (ScreenDimensions.Y / 3.0f), HUDFont);
+    DrawText(EnergyCountString, FColor::Cyan, (ScreenDimensions.X / 1.4f) - EnergyCountStringSize.X, (ScreenDimensions.Y / 3.0f), HUDFont);
 
     // Print the explosion count
-    FString ExplosionCountString = FString::Printf(TEXT("%0.0f Planet lives"), MyGameMode->ExplosionMax - MyGameMode->GetExplosionCount());
+    FString ExplosionCountString = FString::Printf(TEXT("%0.0f Planet lifes"), MyGameMode->ExplosionMax - MyGameMode->GetExplosionCount());
     FVector2D ExplosionCountStringSize;
     GetTextSize(ExplosionCountString, ExplosionCountStringSize.X, ExplosionCountStringSize.Y, HUDFont);
-    DrawText(ExplosionCountString, FColor::Red, (ScreenDimensions.X / 1.6f), (ScreenDimensions.Y / 3.0f) + EnergyCountStringSize.Y, HUDFont);
+    DrawText(ExplosionCountString, FColor::Red, (ScreenDimensions.X / 1.4f) - ExplosionCountStringSize.X, (ScreenDimensions.Y / 3.0f) + EnergyCountStringSize.Y, HUDFont);
+
+    if (MyGameMode->bShowTutorialTimeAttack)
+    {
+        // Print the time attack
+        FString TutorialCurrentTimeAttackString = FString::Printf(TEXT("Tutorial time : %0.2f"), MyGameMode->TutorialCurrentTimeAttack);
+        FVector2D TutorialCurrentTimeAttackStringSize;
+        GetTextSize(TutorialCurrentTimeAttackString, TutorialCurrentTimeAttackStringSize.X, TutorialCurrentTimeAttackStringSize.Y, HUDFont);
+        DrawText(TutorialCurrentTimeAttackString, FColor::Green, (ScreenDimensions.X / 1.4f) - TutorialCurrentTimeAttackStringSize.X,
+            (ScreenDimensions.Y / 3.0f) + TutorialCurrentTimeAttackStringSize.Y + ExplosionCountStringSize.Y + EnergyCountStringSize.Y, HUDFont);
+
+        // Print the best time attack
+        FString TutorialBestTimeAttackString = FString::Printf(TEXT("Best time : %0.2f"), MyGameMode->TutorialBestTimeAttack);
+        FVector2D TutorialBestTimeAttackStringSize;
+        GetTextSize(TutorialBestTimeAttackString, TutorialBestTimeAttackStringSize.X, TutorialBestTimeAttackStringSize.Y, HUDFont);
+        DrawText(TutorialBestTimeAttackString, FColor::Yellow, (ScreenDimensions.X / 1.4f) - TutorialBestTimeAttackStringSize.X,
+            (ScreenDimensions.Y / 3.0f) + TutorialBestTimeAttackStringSize.Y + ExplosionCountStringSize.Y + EnergyCountStringSize.Y + TutorialCurrentTimeAttackStringSize.Y, HUDFont);
+    }    
+
+    if (MyGameMode->bShowExplosionWarning)
+    {
+        FString WarningString = FString::Printf(TEXT("WARNING!"));
+        FVector2D WarningStringSize;
+        GetTextSize(WarningString, WarningStringSize.X, WarningStringSize.Y, HUDFont);
+        DrawText(WarningString, FColor::Red, (ScreenDimensions.X - WarningStringSize.X) / 2.0f, (ScreenDimensions.Y - WarningStringSize.Y) / 2.3f, HUDFont);
+
+        FString PlanetLifeLossString = FString::Printf(TEXT("-Planet life loss-"));
+        FVector2D PlanetLifeLossStringSize;
+        GetTextSize(PlanetLifeLossString, PlanetLifeLossStringSize.X, PlanetLifeLossStringSize.Y, HUDFont);
+        DrawText(PlanetLifeLossString, FColor::Red, (ScreenDimensions.X - PlanetLifeLossStringSize.X) / 2.0f, (ScreenDimensions.Y - PlanetLifeLossStringSize.Y) / 2.3f + WarningStringSize.Y, HUDFont);
+    }
 }
 
 void APrototypeHUD::DrawScan()
@@ -147,12 +197,18 @@ void APrototypeHUD::DrawScan()
     if (MyCharacter->bIsScanning)
     {
         // Scanning HUD
+        FString AbsorbEnergyString = FString::Printf(TEXT("Absorbing energy"));
+        FVector2D AbsorbEnergySize;
+        GetTextSize(AbsorbEnergyString, AbsorbEnergySize.X, AbsorbEnergySize.Y, HUDFont);
+        DrawText(AbsorbEnergyString, FColor::Cyan, (ScreenDimensions.X - AbsorbEnergySize.X) / 2.0f, (ScreenDimensions.Y - AbsorbEnergySize.Y) / 1.75f, HUDFont);
+
+        DrawRect(FColor::Cyan, (ScreenDimensions.X - MyCharacter->ScanProgress * 60.0f * 3.0f) / 2.0f, (ScreenDimensions.Y + 10) / 1.72f, MyCharacter->ScanProgress * 60.0f * 3.0f, 10);
+        
         float ScanPourcentage = (MyCharacter->ScanProgress / MyCharacter->ScanMaximum) * 100;
-        FString ScanProgressString = FString::Printf(TEXT("Absorbing energy (%.1f)"), ScanPourcentage);
+        FString ScanProgressString = FString::Printf(TEXT("(%0.f%)"), ScanPourcentage);
         FVector2D ScanProgressSize;
         GetTextSize(ScanProgressString, ScanProgressSize.X, ScanProgressSize.Y, HUDFont);
-        DrawText(ScanProgressString, FColor::Cyan, (ScreenDimensions.X - ScanProgressSize.X) / 2.0f, (ScreenDimensions.Y - ScanProgressSize.Y) / 1.75f, HUDFont);
-        DrawRect(FColor::Cyan, (ScreenDimensions.X - MyCharacter->ScanProgress * 60.0f) / 2.0f, (ScreenDimensions.Y + 10) / 1.7f, MyCharacter->ScanProgress * 60.0f, 10);
+        DrawText(ScanProgressString, FColor::Cyan, (ScreenDimensions.X - ScanProgressSize.X) / 2.0f, (ScreenDimensions.Y - ScanProgressSize.Y) / 1.6f, HUDFont);
     }    
 }
 

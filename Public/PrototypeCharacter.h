@@ -40,6 +40,9 @@ public:
     /** Sliding update */
     void UpdateSlide(float DeltaSeconds);
 
+    /** Powerup detection update */
+    void UpdatePowerupDetection(float DeltaSeconds);
+
 
     //////////////////////////////////////////////////////////////////////////
     // Camera & aim
@@ -336,6 +339,12 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Power)
     USphereComponent* CollectionSphere;
 
+    /** Timer delay for detection */
+    float PowerupDetectionTimer;
+
+    /** Number of powerups close range */
+    float PowerupDetectedCount;
+
     /** Stats unspent of our character */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
     float StatsCount;
@@ -344,13 +353,45 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
     float SpeedPowerLevel;
 
+    /** Speed power increment per level */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
+    float SpeedPowerIncrement;
+
+    /** Speed power for level 1 */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
+    float SpeedPowerDefault;
+
+    /** Acceleration power increment per level */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
+    float AccelerationPowerIncrement;
+
+    /** Acceleration power for level 1 */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
+    float AccelerationPowerDefault;
+
     /** Jump power level of our character */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
     float JumpPowerLevel;
 
+    /** Jump power increment per level */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
+    float JumpPowerIncrement;
+
+    /** Jump power for level 1 */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
+    float JumpPowerDefault;
+
     /** Stamina power level of our character */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
     float StaminaPowerLevel;
+
+    /** Stamina power per level */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
+    float StaminaPowerIncrement;
+
+    /** Stamina power for level 1 */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
+    float StaminaPowerDefault;
 
 
     //////////////////////////////////////////////////////////////////////////
@@ -379,13 +420,25 @@ public:
     // Misc
     /** Material used in order to know if the mesh is walljumpable */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
-    UMaterial* WallJumpMaterial;    
+    UMaterial* WallJumpMaterial;  
+
+    /** Wallride distance */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
+    float WallRideDistance;
 
     /** Function used by the OnUpgradePowerXPressed */
     void UpgradePower(float &PowerId);
 
-    /** */
+    /** Show that character is lacking stamina for action */
     void MissingStamina();
+
+    /** Is cheat for powerups on */
+    bool bIsHackingPowerups;
+
+    /** Hack powerups */
+    UFUNCTION(Exec)
+    void HackPO();
+        
 
 protected:
 	// APawn interface

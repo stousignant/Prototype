@@ -6,6 +6,8 @@
 #include "DynamicEnvAsset.h"
 #include "Kismet/GameplayStatics.h"
 
+const float BEST_TUTORIAL_TIME_ATTACK = 9.49f;
+
 APrototypeGameMode::APrototypeGameMode(const FObjectInitializer& ObjectInitializer)	: Super(ObjectInitializer)
 {
 	// Set default pawn class to our Blueprinted character
@@ -19,12 +21,48 @@ APrototypeGameMode::APrototypeGameMode(const FObjectInitializer& ObjectInitializ
     EnergyMax = 5.0f;
     EnergyCount = 0.0f;
     ExplosionMax = 3.0f;
-    ExplosionCount = 0.0f;    
+    ExplosionCount = 0.0f;  
+
+    TutorialCurrentTimeAttack = 0.0f;
+    TutorialBestTimeAttack = BEST_TUTORIAL_TIME_ATTACK;
+    TutorialTimeAttackTimer = 0.0;
+    bShowTutorialTimeAttack = false;
+
+    ExplosionWarningTimer = 0.0;
+    bShowExplosionWarning = false;
 }
 
 void APrototypeGameMode::Tick(float DeltaSeconds)
 {
+    // Accumulate time for tutorial time attack
+    if (GetCurrentState() == EPrototypePlayState::ETutorial)
+    {
+        TutorialCurrentTimeAttack += DeltaSeconds;
+    }
 
+    // Show tutorial time attack results
+    if (TutorialTimeAttackTimer > 0.0f)
+    {
+        TutorialTimeAttackTimer -= DeltaSeconds;
+        bShowTutorialTimeAttack = true;
+
+        if (TutorialTimeAttackTimer <= 0.0f)
+        {
+            bShowTutorialTimeAttack = false;
+        }
+    }
+
+    // Show explosion warning
+    if (ExplosionWarningTimer > 0.0f)
+    {
+        ExplosionWarningTimer -= DeltaSeconds;
+        bShowExplosionWarning = true;
+
+        if (ExplosionWarningTimer <= 0.0f)
+        {
+            bShowExplosionWarning = false;
+        }
+    }
 }
 
 float APrototypeGameMode::GetEnergyCount()
@@ -62,6 +100,12 @@ void APrototypeGameMode::IncrementExplosion(int value)
     {
         SetCurrentState(EPrototypePlayState::EGameWon);
     }
+    // Signal warning
+    else
+    {
+        // Show warning for planet life loss 3 seconds
+        ExplosionWarningTimer = 3.0f;
+    }
 }
 
 void APrototypeGameMode::SetCurrentState(EPrototypePlayState NewState)
@@ -87,6 +131,9 @@ void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
     // When we're playing, the spawn volumes can spawn
     case EPrototypePlayState::EEarlyGame:
     {
+        // Show tutorial time attack for 5 seconds
+        TutorialTimeAttackTimer = 5.0f;
+
         ToggleSpawnVolumes(true);
     }
     break;

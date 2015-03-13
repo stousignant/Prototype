@@ -15,6 +15,9 @@ public:
     // Constructor
     ASpawnVolume(const FObjectInitializer& ObjectInitializer);
 
+    /** */
+    virtual void Tick(float DeltaSeconds) override;
+
     /** BoxComponent to specify the spawning area within the level */
     UPROPERTY(VisibleInstanceOnly, Category = Spawning)
     UBoxComponent* WhereToSpawn;
@@ -59,10 +62,16 @@ public:
 
     /** Is first spawn */
     bool bIsFirstSpawn;
-
-    virtual void Tick(float DeltaSeconds) override;
-
+    
+    /** */
     void ToggleSpawning(bool Toggle);
+
+    /** To adjust the spawn delay depending on player's skill */
+    void AdjustSpawnDelay();
+
+    /** Spawn delay multiplier for player's skill */
+    float SpawnDelayMultiplier;
+    
 
 
 private:
