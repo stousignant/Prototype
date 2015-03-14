@@ -12,7 +12,7 @@
 //GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("GetActorRotation (%f,%f,%f)"), GetActorRotation().Vector().X, GetActorRotation().Vector().Y, GetActorRotation().Vector().Z));
 //GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("This is an on screen message!"));
 
-const int MAX_LEVEL = 7;
+const int MAX_LEVEL = 10;
 
 //////////////////////////////////////////////////////////////////////////
 // APrototypeCharacter
@@ -40,16 +40,17 @@ APrototypeCharacter::APrototypeCharacter(const FObjectInitializer& ObjectInitial
     // Set power variables
     SpeedPowerDefault = 1500.0f;
     SpeedPowerLevel = 1.0f;
-    SpeedPowerIncrement = 300.0f;
+    SpeedPowerIncrement = 150.0f;
     AccelerationPowerDefault = 3000.0f;
-    AccelerationPowerIncrement = 1000.0f;
+    AccelerationPowerIncrement = 500.0f;
     JumpPowerDefault = 1800.0f;
     JumpPowerLevel = 1.0f;
-    JumpPowerIncrement = 250.0f;
+    JumpPowerIncrement = 125.0f;
     StaminaPowerDefault = 1.0f;
     StaminaPowerLevel = 1.0f;
-    StaminaPowerIncrement = 0.15f;
+    StaminaPowerIncrement = 0.075f;
     PowerupDetectionTimer = 0.0f;
+    ExperiencePoints = 0.0f;
 
     // Set default power values
     RunSpeed = SpeedPowerDefault;
@@ -341,6 +342,22 @@ void APrototypeCharacter::UpdateScan(float DeltaSeconds)
             // Call the on picked up function
             AEnergyPickup* const TestEnergy = Cast<AEnergyPickup>(testHitResult.GetActor());
             TestEnergy->OnPickedUp();
+
+            // Increment xp
+            ExperiencePoints += 20.0f;
+
+            // If leveled up
+            if (ExperiencePoints > 100.0f)
+            {
+                // Decrease xp if he didn't put his stat from leveling up
+                ExperiencePoints -= 100.0f;                
+            }
+            
+            // If leveled up
+            if (ExperiencePoints == 100.0f)
+            {
+                LevelUp();
+            }
 
             // Play energy sound
             UGameplayStatics::PlaySoundAtLocation(this, ScanSound, GetActorLocation());
@@ -731,6 +748,12 @@ void APrototypeCharacter::UpgradePower(float &PowerId)
         // Reduce stat available
         StatsCount--;
 
+        // Reset xp if needed
+        if (ExperiencePoints == 100.0f)
+        {            
+            ExperiencePoints = 0.0f;
+        }
+
         // Play upgrade sound
         UGameplayStatics::PlaySoundAtLocation(this, PowerUpgradeSound, GetActorLocation());
     }
@@ -940,6 +963,21 @@ void APrototypeCharacter::UpdateSlideSounds(bool bNewIsSliding)
             SlideAC->Stop();
         }
     }
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+// Powerups
+void APrototypeCharacter::LevelUp()
+{
+    // Increment stat
+    StatsCount++;
+
+    // Full stamina
+    StaminaCurrent = StaminaMax;
+
+    // Play level up sound
+    UGameplayStatics::PlaySoundAtLocation(this, LevelUpSound, GetActorLocation());
 }
 
 

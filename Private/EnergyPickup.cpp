@@ -45,8 +45,8 @@ void AEnergyPickup::OnPickedUp_Implementation()
     Destroy();
 
     // If early game, adjust spawn delay
-    if (MyGameMode->GetCurrentState() == EPrototypePlayState::EEarlyGame)
-    {
+    //if (MyGameMode->GetCurrentState() == EPrototypePlayState::EEarlyGame)
+    //{
         // Find the spawn volume
         TArray<AActor*> FoundSpawnVolumeActors;
         UGameplayStatics::GetAllActorsOfClass(GetWorld(), ASpawnVolume::StaticClass(), FoundSpawnVolumeActors);
@@ -69,7 +69,7 @@ void AEnergyPickup::OnPickedUp_Implementation()
                 }                
             }
         }
-    }    
+    //}    
 }
 
 void AEnergyPickup::Explode()

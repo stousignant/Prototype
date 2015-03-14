@@ -58,6 +58,9 @@ public:
     /** Override function used when game is launched */
     virtual void BeginPlay() override;
 
+    /** Time elapsed during the game */
+    float GameTime;
+
     /** Time elapsed during the tutorial */
     float TutorialCurrentTimeAttack;
 

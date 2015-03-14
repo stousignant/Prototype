@@ -32,10 +32,6 @@ public:
                             FVector HitNormal,
                             FVector NormalImpulse,
                             const FHitResult & Hit) override;
-
-    /** Sound to play when we collect a power up */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
-    class USoundBase* PowerPickupSound;
 	
 	
 };

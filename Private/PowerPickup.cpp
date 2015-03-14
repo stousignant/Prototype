@@ -20,9 +20,6 @@ void APowerPickup::OnPickedUp_Implementation()
     // Call the parent implementation of OnPickedUp first
     Super::OnPickedUp_Implementation();
 
-    // Play pick up sound
-    UGameplayStatics::PlaySoundAtLocation(this, PowerPickupSound, GetActorLocation());
-
     // Deactivate the power pickup
     bIsActive = false;
 
@@ -50,11 +47,8 @@ void APowerPickup::ReceiveHit(
         // Pick up
         this->OnPickedUp();
 
-        // Increment character stats
-        TestCharacter->StatsCount++;
-
-        // Full stamina
-        TestCharacter->StaminaCurrent = TestCharacter->StaminaMax;
+        // Level up the character
+        TestCharacter->LevelUp();        
     }
 }
 

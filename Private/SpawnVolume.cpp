@@ -19,7 +19,7 @@ ASpawnVolume::ASpawnVolume(const FObjectInitializer& ObjectInitializer) : Super(
     RootComponent = WhereToSpawn;
 
     // Set the spawn delay range and get the first SpawnDelay
-    SpawnDelay = 45.0f;
+    SpawnDelay = 50.0f;
     SpawnDelayMultiplier = 1.0f;
     
     // Set the default speed level for the spawning objects
@@ -32,7 +32,7 @@ ASpawnVolume::ASpawnVolume(const FObjectInitializer& ObjectInitializer) : Super(
     SpawnDelayDecrement = 1.0f;
 
     // Set the default spawn distance values
-    SpawnDistance = 15000.0f;
+    SpawnDistance = 14000.0f;
     SpawnDistanceIncrement = 500.0f;
 
     // Set the default

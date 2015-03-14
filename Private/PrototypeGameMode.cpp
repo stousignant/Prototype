@@ -5,6 +5,7 @@
 #include "MusicPlayer.h"
 #include "DynamicEnvAsset.h"
 #include "Kismet/GameplayStatics.h"
+#include "Engine.h"
 
 const float BEST_TUTORIAL_TIME_ATTACK = 9.49f;
 
@@ -23,6 +24,7 @@ APrototypeGameMode::APrototypeGameMode(const FObjectInitializer& ObjectInitializ
     ExplosionMax = 3.0f;
     ExplosionCount = 0.0f;  
 
+    GameTime = 0.0f;
     TutorialCurrentTimeAttack = 0.0f;
     TutorialBestTimeAttack = BEST_TUTORIAL_TIME_ATTACK;
     TutorialTimeAttackTimer = 0.0;
@@ -38,6 +40,12 @@ void APrototypeGameMode::Tick(float DeltaSeconds)
     if (GetCurrentState() == EPrototypePlayState::ETutorial)
     {
         TutorialCurrentTimeAttack += DeltaSeconds;
+    }
+
+    // Accumulate time for game time
+    if (GetCurrentState() == EPrototypePlayState::EEarlyGame || GetCurrentState() == EPrototypePlayState::ELateGame)
+    {
+        GameTime += DeltaSeconds;
     }
 
     // Show tutorial time attack results
@@ -78,6 +86,11 @@ void APrototypeGameMode::IncrementEnergy(int value)
     if (GetCurrentState() == EPrototypePlayState::EEarlyGame && (EnergyCount + ExplosionCount) >= EnergyMax)
     {
         SetCurrentState(EPrototypePlayState::EGameWon);
+    }
+
+    if (fmod(EnergyCount, 5) == 0)
+    {
+
     }
 }
 

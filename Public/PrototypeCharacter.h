@@ -317,6 +317,10 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
     class USoundBase* MissingStaminaSound;
 
+    /** Sound to play when leveling up */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
+    class USoundBase* LevelUpSound;
+
     /** Handles sounds for running */
     void UpdateRunSounds(bool bNewRunning);
 
@@ -392,6 +396,13 @@ public:
     /** Stamina power for level 1 */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
     float StaminaPowerDefault;
+
+    /** Experience */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
+    float ExperiencePoints;
+
+    /** */
+    void LevelUp();    
 
 
     //////////////////////////////////////////////////////////////////////////
