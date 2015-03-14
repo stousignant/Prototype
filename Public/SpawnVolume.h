@@ -27,8 +27,8 @@ public:
     TSubclassOf<class APickup> WhatToSpawn;
 
     /** The current spawn delay */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
-    float SpawnDelay;
+    //UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
+    //float SpawnDelay;
 
     /** Finds a random point within the BoxComponent */
     UFUNCTION(BlueprintPure, Category = Spawning)
@@ -47,8 +47,8 @@ public:
     float SpeedIncrement;
 
     /** Spawn delay decrement */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
-    float SpawnDelayDecrement;
+    //UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
+    //float SpawnDelayDecrement;
 
     /** Spawn distance increment */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
@@ -64,26 +64,26 @@ public:
     bool bIsFirstSpawn;
     
     /** */
-    void ToggleSpawning(bool Toggle);
+    //void ToggleSpawning(bool Toggle);
+
+    /** Handles the spawning of a new pickup */
+    void SpawnPickup();
 
     /** To adjust the spawn delay depending on player's skill */
-    void AdjustSpawnDelay();
+    //void AdjustSpawnDelay();
 
     /** Spawn delay multiplier for player's skill */
-    float SpawnDelayMultiplier;
+    //float SpawnDelayMultiplier;
     
 
 
 private:
 
     /** Whether or not spawning is enabled */
-    bool bSpawningEnabled;
-
-    /** Handles the spawning of a new pickup */
-    void SpawnPickup();
+    //bool bSpawningEnabled;
 
     /** The timer for when to spawn the pickup */
-    float SpawnTime;
+    //float SpawnTime;
 
     /** Generate random position */
     void GenerateRandomLocation();

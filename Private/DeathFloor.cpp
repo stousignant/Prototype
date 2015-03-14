@@ -62,7 +62,7 @@ void ADeathFloor::Tick(float DeltaSeconds)
         }
     }   
 }
-
+/*
 void ADeathFloor::ReceiveHit(
     class UPrimitiveComponent* MyComp,
     AActor* Other,
@@ -97,6 +97,6 @@ void ADeathFloor::ReceiveHit(
     {
         TestCharacter->Die();
     }
-}
+}*/
 
 

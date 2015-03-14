@@ -8,7 +8,7 @@
 // Difficulty caps
 const float SPAWN_DISTANCE_MAX = 25000.0f;
 const float SPAWN_SPEED_MAX = 40.0f;
-const float SPAWN_DELAY_MAX = 13.0f;
+//const float SPAWN_DELAY_MAX = 13.0f;
 
 ASpawnVolume::ASpawnVolume(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -19,17 +19,17 @@ ASpawnVolume::ASpawnVolume(const FObjectInitializer& ObjectInitializer) : Super(
     RootComponent = WhereToSpawn;
 
     // Set the spawn delay range and get the first SpawnDelay
-    SpawnDelay = 50.0f;
-    SpawnDelayMultiplier = 1.0f;
+    //SpawnDelay = 50.0f;
+    //SpawnDelayMultiplier = 1.0f;
     
     // Set the default speed level for the spawning objects
-    SpawnedSpeedLevel = 10.0f;
+    SpawnedSpeedLevel = 5.0f;
 
     // Set the default speed increment
-    SpeedIncrement = 1.0f;
+    SpeedIncrement = 0.5f;
 
     // Set the default spawn delay decrement
-    SpawnDelayDecrement = 1.0f;
+    //SpawnDelayDecrement = 1.0f;
 
     // Set the default spawn distance values
     SpawnDistance = 14000.0f;
@@ -39,15 +39,15 @@ ASpawnVolume::ASpawnVolume(const FObjectInitializer& ObjectInitializer) : Super(
     bIsFirstSpawn = true;
 
     // Make the SpawnVolume tickable
-    PrimaryActorTick.bCanEverTick = true;
+    PrimaryActorTick.bCanEverTick = false;
 }
 
 void ASpawnVolume::SpawnPickup()
 {
-    // If we have set something to spawn:
+    // If we have set something to spawn
     if (WhatToSpawn != NULL)
     {
-        // Check for a valid World: 
+        // Check for a valid World
         UWorld* const World = GetWorld();
         if (World)
         {
@@ -77,15 +77,18 @@ void ASpawnVolume::SpawnPickup()
             // Increase difficulty but not over threshold
             SpawnedSpeedLevel = SpawnedSpeedLevel >= SPAWN_SPEED_MAX ? SPAWN_SPEED_MAX : SpawnedSpeedLevel + SpeedIncrement;
 
+            // Increment the spawn distance per spawn but not over threshold
+            SpawnDistance = SpawnDistance >= SPAWN_DISTANCE_MAX ? SPAWN_DISTANCE_MAX : SpawnDistance + SpawnDistanceIncrement;
+
             // Increment the spawn counter
             SpawnCounter++;
 
             // Stop spawning if maximum is reached in the early game
-            APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-            if (MyGameMode->GetCurrentState() == EPrototypePlayState::EEarlyGame && SpawnCounter >= MyGameMode->EnergyMax)
-            {
-                ToggleSpawning(false);
-            }
+            //APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+            //if (MyGameMode->GetCurrentState() == EPrototypePlayState::EEarlyGame && SpawnCounter >= MyGameMode->EnergyMax)
+            //{
+            //    ToggleSpawning(false);
+            //}
         }
     }
 }
@@ -116,28 +119,17 @@ FVector ASpawnVolume::GetRandomPointInVolume()
     {
         // If early game, spawn close
         APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-        if (MyGameMode->GetCurrentState() == EPrototypePlayState::EEarlyGame)
-        {
-            do
-            {
-                // The random spawn location will fall between the min and max X, Y, and Z
-                RandomLocation.X = FMath::FRandRange(Origin.X - BoxExtent.X, Origin.X + BoxExtent.X);
-                RandomLocation.Y = FMath::FRandRange(Origin.Y - BoxExtent.Y, Origin.Y + BoxExtent.Y);
-                RandomLocation.Z = FMath::FRandRange(Origin.Z, Origin.Z);
 
-            } while (FVector::Dist(LastRandomLocation, RandomLocation) > (SpawnDistance * 0.75f) || FVector::Dist(LastRandomLocation, RandomLocation) < (SpawnDistance * 0.5f));
-        }
-        else
+        float SpawnDistanceDifficulty = (MyGameMode->GetCurrentState() == EPrototypePlayState::EEarlyGame) ? 1.0f : 2.0f;
+        
+        do
         {
-            do
-            {
-                // The random spawn location will fall between the min and max X, Y, and Z
-                RandomLocation.X = FMath::FRandRange(Origin.X - BoxExtent.X, Origin.X + BoxExtent.X);
-                RandomLocation.Y = FMath::FRandRange(Origin.Y - BoxExtent.Y, Origin.Y + BoxExtent.Y);
-                RandomLocation.Z = FMath::FRandRange(Origin.Z, Origin.Z);
+            // The random spawn location will fall between the min and max X, Y, and Z
+            RandomLocation.X = FMath::FRandRange(Origin.X - BoxExtent.X, Origin.X + BoxExtent.X);
+            RandomLocation.Y = FMath::FRandRange(Origin.Y - BoxExtent.Y, Origin.Y + BoxExtent.Y);
+            RandomLocation.Z = FMath::FRandRange(Origin.Z, Origin.Z);
 
-            } while (FVector::Dist(LastRandomLocation, RandomLocation) < SpawnDistance);
-        }        
+        } while (FVector::Dist(LastRandomLocation, RandomLocation) > (SpawnDistance * 0.75f * SpawnDistanceDifficulty) || FVector::Dist(LastRandomLocation, RandomLocation) < (SpawnDistance * 0.5f * SpawnDistanceDifficulty));
     }    
         
     // Return the random spawn location
@@ -148,13 +140,13 @@ FVector ASpawnVolume::GetRandomPointInVolume()
 void ASpawnVolume::Tick(float DeltaSeconds)
 {
     // If spawning is not enabled, do nothing
-    if (!bSpawningEnabled)
+    /*if (!bSpawningEnabled)
         return;
 
     // Always add delta time to our Spawn Time
     SpawnTime += DeltaSeconds * SpawnDelayMultiplier;
 
-    bool bShouldSpawn = (SpawnTime > SpawnDelay);
+    //bool bShouldSpawn = (SpawnTime > SpawnDelay);
 
     if (bShouldSpawn)
     {
@@ -169,9 +161,9 @@ void ASpawnVolume::Tick(float DeltaSeconds)
 
         // Increment the spawn distance per spawn but not over threshold
         SpawnDistance = SpawnDistance >= SPAWN_DISTANCE_MAX ? SPAWN_DISTANCE_MAX : SpawnDistance + SpawnDistanceIncrement;
-    }
+    }*/
 }
-
+/*
 void ASpawnVolume::ToggleSpawning(bool Toggle)
 {
     bSpawningEnabled = Toggle;
@@ -180,21 +172,38 @@ void ASpawnVolume::ToggleSpawning(bool Toggle)
     APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
     if (MyGameMode->GetCurrentState() == EPrototypePlayState::EEarlyGame)
     {
+        // Spawn pickup after a 1 second delay
+        FTimerHandle UniqueHandle;
+        FTimerDelegate RespawnDelegate = FTimerDelegate::CreateUObject(this, &ASpawnVolume::SpawnPickup);
+        GetWorldTimerManager().SetTimer(UniqueHandle, RespawnDelegate, 1.f, false);
+
+        SpawnPickup();
         // Start spawning immediately
-        SpawnTime = SpawnDelay;
+        //SpawnTime = SpawnDelay;
     }
     else if (MyGameMode->GetCurrentState() == EPrototypePlayState::ELateGame)
     {
-        // Start spawning soon
-        SpawnTime = SpawnDelay / 2;
-    }    
-}
+        // Spawn pickup after a 10 second delay
+        FTimerHandle UniqueHandle;
+        FTimerDelegate RespawnDelegate = FTimerDelegate::CreateUObject(this, &ASpawnVolume::SpawnPickup);
+        GetWorldTimerManager().SetTimer(UniqueHandle, RespawnDelegate, 10.f, false);
 
-void ASpawnVolume::AdjustSpawnDelay()
+        // Start spawning soon
+        //SpawnTime = SpawnDelay / 2;
+    }    
+}*/
+
+/*void ASpawnVolume::AdjustSpawnDelay()
 {
     // best = 20x, worst = 1x
     SpawnDelayMultiplier = SpawnDelay / SpawnTime;
-}
+}*/
+
+/*void ASpawnVolume::AdjustSpawnSpeed()
+{
+    // best = 20x, worst = 1x
+    SpawnDelayMultiplier = SpawnDelay / SpawnTime;
+}*/
 
 
 

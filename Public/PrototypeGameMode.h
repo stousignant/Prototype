@@ -29,6 +29,12 @@ public:
     /** Tick */
     virtual void Tick(float DeltaSeconds) override;
 
+    /** */
+    ASpawnVolume* SpawnVolumeActor;
+    
+    /** */
+    bool bIsSpawnVolumeSet;
+
     /** Number of energy to end the game */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = GameMode)
     float EnergyMax;
@@ -78,12 +84,18 @@ public:
 
     /** Should show planet life loss warning */
     bool bShowExplosionWarning;
+
+    /** Spawn an energy with a delay */
+    void SpawnEnergyWithDelay();
     
 private:
 
     /** Enable-Disable spawning for all spawn volumes */
-    void ToggleSpawnVolumes(bool Toggle);
-    
+    //void ToggleSpawnVolumes(bool Toggle);
+     
+    /** Spawn an energy  */
+    void SpawnEnergy();
+
     /** Current game mode state */
     EPrototypePlayState CurrentState;
 

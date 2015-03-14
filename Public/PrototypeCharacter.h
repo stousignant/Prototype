@@ -139,6 +139,10 @@ public:
     /** Current jumping state */
     UPROPERTY(Transient)
     bool bWantsToJump;
+
+    /** Current crouch state */
+    UPROPERTY(Transient)
+    bool bWantsToCrouch;
     
     /** If the character's movements are blocked */
     bool bMovementBlocked;
@@ -178,10 +182,6 @@ public:
     /** Normal fall speed */
     UPROPERTY(EditDefaultsOnly, Category = Gameplay)
     float FallSpeed;
-
-    /** Dive speed */
-    UPROPERTY(EditDefaultsOnly, Category = Gameplay)
-    float DiveSpeed;
     
 	/** Handles moving forward/backward */
 	void OnMoveForward(float Val);
@@ -214,7 +214,13 @@ public:
     void OnDivePressed();
 
     /** Player pressed crouch action */
-    void OnCrouchPressed();    
+    void OnCrouchPressed();
+
+    /** Player released crouch action */
+    void OnCrouchReleased();
+
+    /** Verify if slide and can */
+    void VerifySlide();
 
     /** Change sliding state */
     void SetSliding(bool bNewSliding);
@@ -448,7 +454,7 @@ public:
 
     /** Hack powerups */
     UFUNCTION(Exec)
-    void HackPO();
+    void System0731();
         
 
 protected:

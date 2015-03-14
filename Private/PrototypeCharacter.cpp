@@ -12,7 +12,7 @@
 //GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("GetActorRotation (%f,%f,%f)"), GetActorRotation().Vector().X, GetActorRotation().Vector().Y, GetActorRotation().Vector().Z));
 //GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("This is an on screen message!"));
 
-const int MAX_LEVEL = 10;
+const int MAX_LEVEL = 15;
 
 //////////////////////////////////////////////////////////////////////////
 // APrototypeCharacter
@@ -194,7 +194,7 @@ void APrototypeCharacter::UpdateStamina(float DeltaSeconds)
         }
         else if (bIsCrouched && !GetCharacterMovement()->IsFalling())
         {
-            StaminaCurrent = (StaminaCurrent + StaminaReplenishWithDelta * 2 > StaminaMax) ? StaminaMax : StaminaCurrent + StaminaReplenishWithDelta * 3;
+            StaminaCurrent = (StaminaCurrent + StaminaReplenishWithDelta * 2 > StaminaMax) ? StaminaMax : StaminaCurrent + StaminaReplenishWithDelta * 4;
         }
         else
         {
@@ -213,6 +213,12 @@ void APrototypeCharacter::UpdateStamina(float DeltaSeconds)
     else
     {
         bIsMissingStamina = false;
+    }
+
+    // For hack
+    if (StaminaCurrent > StaminaMax)
+    {
+        StaminaCurrent = StaminaMax;
     }
 }
 
@@ -328,7 +334,7 @@ void APrototypeCharacter::UpdateScan(float DeltaSeconds)
         // If scan is hitting the energy
         if (testHitResult.GetComponent()->GetName() == "PickupMesh")
         {
-            ScanProgress += DeltaSeconds * 1.5f;
+            ScanProgress += DeltaSeconds * 2.0f;
         }
         // If scan is hitting the beam
         else if (testHitResult.GetComponent()->GetName() == "BeamMesh")
@@ -341,7 +347,7 @@ void APrototypeCharacter::UpdateScan(float DeltaSeconds)
         {
             // Call the on picked up function
             AEnergyPickup* const TestEnergy = Cast<AEnergyPickup>(testHitResult.GetActor());
-            TestEnergy->OnPickedUp();
+            TestEnergy->Absorb();
 
             // Increment xp
             ExperiencePoints += 20.0f;
@@ -361,6 +367,9 @@ void APrototypeCharacter::UpdateScan(float DeltaSeconds)
 
             // Play energy sound
             UGameplayStatics::PlaySoundAtLocation(this, ScanSound, GetActorLocation());
+
+            // Reset scan progress
+            ScanProgress = 0.0f;
         }
     }
     else
@@ -378,7 +387,11 @@ void APrototypeCharacter::UpdateSlide(float DeltaSeconds)
     }
 
     // If slide is over
-    if (bIsSliding && GetCharacterMovement()->Velocity.Size() <= (RunSpeed / 2))
+    if (bIsSliding && bIsCrouched && GetCharacterMovement()->Velocity.Size() <= (RunSpeed / 2))
+    {
+        SetSliding(false);
+    }
+    else if (!bIsCrouched)
     {
         SetSliding(false);
     }
@@ -432,6 +445,7 @@ void APrototypeCharacter::SetupPlayerInputComponent(class UInputComponent* Input
     InputComponent->BindAction("Dive", IE_Pressed, this, &APrototypeCharacter::OnDivePressed);
 
     InputComponent->BindAction("Crouch", IE_Pressed, this, &APrototypeCharacter::OnCrouchPressed);
+    InputComponent->BindAction("Crouch", IE_Released, this, &APrototypeCharacter::OnCrouchReleased);
 
     InputComponent->BindAction("Scan", IE_Pressed, this, &APrototypeCharacter::OnScanPressed);
     InputComponent->BindAction("Scan", IE_Released, this, &APrototypeCharacter::OnScanReleased);
@@ -629,42 +643,54 @@ void APrototypeCharacter::OnDivePressed()
     }
 
     // Higher the fall speed
-    GetPawnPhysicsVolume()->TerminalVelocity = DiveSpeed;
+    GetPawnPhysicsVolume()->TerminalVelocity = RunSpeed * 5;
 
     // Add a force downward
-    GetCharacterMovement()->Velocity += FVector(0, 0, RunSpeed * -3);
+    GetCharacterMovement()->Velocity += FVector(0, 0, RunSpeed * -5);
 }
 
 void APrototypeCharacter::OnCrouchPressed()
 {
     // Crouch the character
-    GetCharacterMovement()->bWantsToCrouch = !GetCharacterMovement()->IsCrouching();
+    GetCharacterMovement()->bWantsToCrouch = true;
+    bWantsToCrouch = true;
 
     /* Slide */
     // In order to slide, must press crouch, not be walking (1.9f), and grounded
     if (GetCharacterMovement()->bWantsToCrouch && GetCharacterMovement()->Velocity.Size() > (RunSpeed / 1.9f) && !GetCharacterMovement()->IsFalling())
     {
-        // Verify if enough stamina
-        if (StaminaCurrent - StaminaDrain * 25 < 0)
-        {
-            MissingStamina();
-
-            // Cancel slide
-            return;
-        }
-        else
-        {
-            // Drain stamina from slide
-            StaminaCurrent = (StaminaCurrent - StaminaDrain * 25 < 0) ? 0 : StaminaCurrent - StaminaDrain * 25;
-        }
-
-        SetSliding(true);        
+        // If wants to slide and can
+        VerifySlide();
     }
+    
+}
 
-    if (bIsSliding && GetCharacterMovement()->IsCrouching())
+void APrototypeCharacter::VerifySlide()
+{
+    // Verify if enough stamina
+    if (StaminaCurrent - StaminaDrain * 25 < 0)
     {
-        SetSliding(false);
+        MissingStamina();
+
+        // Cancel slide
+        return;
     }
+    else
+    {
+        // Drain stamina from slide
+        StaminaCurrent = (StaminaCurrent - StaminaDrain * 25 < 0) ? 0 : StaminaCurrent - StaminaDrain * 25;
+    }
+
+    SetSliding(true);
+}
+
+void APrototypeCharacter::OnCrouchReleased()
+{
+    // Uncrouch the character
+    GetCharacterMovement()->bWantsToCrouch = false;
+
+    // Don't want to uncrouch if released
+    bWantsToCrouch = false;
 }
 
 void APrototypeCharacter::SetSliding(bool bNewSliding)
@@ -696,6 +722,13 @@ void APrototypeCharacter::SetSliding(bool bNewSliding)
 
         // Stop the slide sound
         UpdateSlideSounds(false);
+
+        // Uncrouch if needed
+        if (!bWantsToCrouch)
+        {
+            // Uncrouch the character
+            GetCharacterMovement()->bWantsToCrouch = false;
+        }
     }
 }
 
@@ -759,11 +792,8 @@ void APrototypeCharacter::UpgradePower(float &PowerId)
     }
     else if (bIsHackingPowerups)
     {
-        // Level up stat or set it to 1 if over maximum
-        PowerId = (PowerId < MAX_LEVEL) ? PowerId + 1 : PowerId = 1;
-
-        // Play upgrade sound
-        UGameplayStatics::PlaySoundAtLocation(this, PowerUpgradeSound, GetActorLocation());
+        // Level up stat or set it to 1 if over maximum x2
+        PowerId = (PowerId < MAX_LEVEL * 2) ? PowerId + 1 : PowerId = 1;
     }
 }
 
@@ -797,9 +827,9 @@ void APrototypeCharacter::MissingStamina()
     UGameplayStatics::PlaySoundAtLocation(this, MissingStaminaSound, GetActorLocation());
 }
 
-void APrototypeCharacter::HackPO()
+void APrototypeCharacter::System0731()
 {
-    bIsHackingPowerups = true;
+    bIsHackingPowerups = !bIsHackingPowerups;
 }
 
 
@@ -807,6 +837,19 @@ void APrototypeCharacter::HackPO()
 // Base Movement Override
 void APrototypeCharacter::OnLanded(const FHitResult& Hit)
 {
+    // In order to slide, must press crouch, not be walking (1.9f), and grounded
+    if (GetCharacterMovement()->bWantsToCrouch && GetCharacterMovement()->Velocity.Size2D() > (RunSpeed / 1.9f))
+    {
+        VerifySlide();
+    }
+    
+    // If player is currently holding shift
+    if (bIsRunning)
+    {
+        // Play run sound
+        UpdateRunSounds(true);
+    }
+
     // Change the fall speed to normal
     GetPawnPhysicsVolume()->TerminalVelocity = FallSpeed;
 
@@ -825,14 +868,7 @@ void APrototypeCharacter::OnLanded(const FHitResult& Hit)
     }
 
     // Play land sound
-    UGameplayStatics::PlaySoundAtLocation(this, LandSound, GetActorLocation(), LandVolumeMultiplier);
-
-    // If player is currently holding shift
-    if (bIsRunning)
-    {
-        // Play run sound
-        UpdateRunSounds(true);
-    }
+    UGameplayStatics::PlaySoundAtLocation(this, LandSound, GetActorLocation(), LandVolumeMultiplier);    
 }
 
 void APrototypeCharacter::Falling()

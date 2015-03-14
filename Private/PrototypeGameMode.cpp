@@ -32,6 +32,8 @@ APrototypeGameMode::APrototypeGameMode(const FObjectInitializer& ObjectInitializ
 
     ExplosionWarningTimer = 0.0;
     bShowExplosionWarning = false;
+
+    bIsSpawnVolumeSet = false;
 }
 
 void APrototypeGameMode::Tick(float DeltaSeconds)
@@ -71,6 +73,21 @@ void APrototypeGameMode::Tick(float DeltaSeconds)
             bShowExplosionWarning = false;
         }
     }
+
+    // Find spawn volume
+    if (!bIsSpawnVolumeSet)
+    {
+        TArray<AActor*> FoundSpawnVolumeActors;
+
+        UGameplayStatics::GetAllActorsOfClass(GetWorld(), ASpawnVolume::StaticClass(), FoundSpawnVolumeActors);
+
+        // Enable spawning for each spawn volume
+        for (auto Actor : FoundSpawnVolumeActors)
+        {
+            SpawnVolumeActor = Cast<ASpawnVolume>(Actor);
+            bIsSpawnVolumeSet = true;
+        }
+    }    
 }
 
 float APrototypeGameMode::GetEnergyCount()
@@ -83,14 +100,9 @@ void APrototypeGameMode::IncrementEnergy(int value)
     EnergyCount += value;
 
     // Check if game won
-    if (GetCurrentState() == EPrototypePlayState::EEarlyGame && (EnergyCount + ExplosionCount) >= EnergyMax)
+    if (GetCurrentState() == EPrototypePlayState::EEarlyGame && EnergyCount >= EnergyMax)
     {
         SetCurrentState(EPrototypePlayState::EGameWon);
-    }
-
-    if (fmod(EnergyCount, 5) == 0)
-    {
-
     }
 }
 
@@ -107,11 +119,6 @@ void APrototypeGameMode::IncrementExplosion(int value)
     if (ExplosionCount >= ExplosionMax)
     {
         SetCurrentState(EPrototypePlayState::EGameOver);
-    }
-    // Check if game won
-    else if (GetCurrentState() == EPrototypePlayState::EEarlyGame && (EnergyCount + ExplosionCount) >= EnergyMax)
-    {
-        SetCurrentState(EPrototypePlayState::EGameWon);
     }
     // Signal warning
     else
@@ -144,17 +151,18 @@ void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
     // When we're playing, the spawn volumes can spawn
     case EPrototypePlayState::EEarlyGame:
     {
-        // Show tutorial time attack for 5 seconds
-        TutorialTimeAttackTimer = 5.0f;
+        // Show tutorial time attack for 4 seconds
+        TutorialTimeAttackTimer = 4.0f;
 
-        ToggleSpawnVolumes(true);
+        // First pick up spawn
+        SpawnEnergy();
     }
     break;
     //
     case EPrototypePlayState::EGameOver:
     {
         // If the game is over, the spawn volumes should deactivate
-        ToggleSpawnVolumes(false);
+        //ToggleSpawnVolumes(false);
 
         APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
         PlayerController->SetCinematicMode(true, true, false);
@@ -166,9 +174,9 @@ void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
         // Get the character and block mouvement
         APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
         MyCharacter->bMovementBlocked = true;
-
+        
         // If the game is won, the spawn volumes should deactivate
-        ToggleSpawnVolumes(false);
+        //ToggleSpawnVolumes(false);
     }
     break;
     //
@@ -177,9 +185,9 @@ void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
         // Get the character and unblock mouvement
         APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
         MyCharacter->bMovementBlocked = false;
-
+        
         // If the game is won, the spawn volumes should deactivate
-        ToggleSpawnVolumes(true);
+        //ToggleSpawnVolumes(true);
     }
     break;
     // 
@@ -218,7 +226,7 @@ void APrototypeGameMode::BeginPlay()
     SetCurrentState(EPrototypePlayState::ETutorial);
 }
 
-void APrototypeGameMode::ToggleSpawnVolumes(bool Toggle)
+/*void APrototypeGameMode::ToggleSpawnVolumes(bool Toggle)
 {
     // Find all spawn volume actors
     TArray<AActor*> FoundSpawnVolumeActors;
@@ -234,4 +242,17 @@ void APrototypeGameMode::ToggleSpawnVolumes(bool Toggle)
             SpawnVolumeActor->ToggleSpawning(Toggle);            
         }
     }
+}*/
+
+void APrototypeGameMode::SpawnEnergyWithDelay()
+{
+    // Spawn pickup after a 3 second delay
+    FTimerHandle UniqueHandle;
+    FTimerDelegate TimerDelegate = FTimerDelegate::CreateUObject(this, &APrototypeGameMode::SpawnEnergy);
+    GetWorldTimerManager().SetTimer(UniqueHandle, TimerDelegate, 3.f, false);    
+}
+
+void APrototypeGameMode::SpawnEnergy()
+{
+    SpawnVolumeActor->SpawnPickup();
 }
