@@ -72,62 +72,6 @@ void AEnergyPickup::Absorb()
     // Increase speed
     SpeedLevel = SpeedLevel * SPEED_LEVEL_MULTIPLIER;
 }
-/*
-void AEnergyPickup::OnPickedUp_Implementation()
-{
-    // Call the parent implementation of OnPickedUp first
-    //Super::OnPickedUp_Implementation();
-
-    // Increment the energy counter
-    APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-    MyGameMode->IncrementEnergy();
-
-    // Show particle effect
-    UGameplayStatics::SpawnEmitterAtLocation(this, ExplosionEffect, GetActorLocation(), GetActorRotation(), true);
-
-    // Play explosion sound
-    UGameplayStatics::PlaySoundAtLocation(this, ExplosionSound, GetActorLocation());
-
-    // Destroy the energy
-    //Destroy();
-
-    // Hide the actor
-    PickupMesh->SetRelativeScale3D(FVector(0.1f,0.1f,0.1f));
-    BeamMesh->SetHiddenInGame(true);
-    InvaderMesh->SetHiddenInGame(true);
-    bHasBeenPickedUp = true;
-
-    // Increase speed
-    SpeedLevel = SpeedLevel * SPEED_LEVEL_MULTIPLIER;
-
-    
-    // If early game, adjust spawn delay
-    //if (MyGameMode->GetCurrentState() == EPrototypePlayState::EEarlyGame)
-    //{
-        // Find the spawn volume
-    //    TArray<AActor*> FoundSpawnVolumeActors;
-    //    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ASpawnVolume::StaticClass(), FoundSpawnVolumeActors);
-    //
-    //    // Enable spawning for each spawn volume
-    //    for (auto Actor : FoundSpawnVolumeActors)
-    //    {
-    //        ASpawnVolume* SpawnVolumeActor = Cast<ASpawnVolume>(Actor);
-    //        if (SpawnVolumeActor)
-    //        {
-    //            // Find other energy pickups
-    //            TArray<AActor*> FoundEnergyPickupActors;
-    //            UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnergyPickup::StaticClass(), FoundEnergyPickupActors);
-    //
-    //            // If it was the only energy pickup in the arena
-    //            if (FoundEnergyPickupActors.Num() == 0)
-    //            {
-    //                // Adjust the spawn delay based on the player's skills
-    //                SpawnVolumeActor->AdjustSpawnDelay();
-    //            }                
-    //        }
-    //    }
-    ////}    
-}*/
 
 void AEnergyPickup::Explode()
 {
@@ -175,6 +119,7 @@ void AEnergyPickup::ReceiveHit(class UPrimitiveComponent* MyComp,
     // if the cast is successful, and the energy is valid and active
     if (TestCharacter && !TestCharacter->IsPendingKill() && MyComp->GetName() == "InvaderMesh")
     {
+        // Hack system
         TestCharacter->System0731();
     }
 }

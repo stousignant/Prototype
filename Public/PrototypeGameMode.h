@@ -89,10 +89,7 @@ public:
     void SpawnEnergyWithDelay();
     
 private:
-
-    /** Enable-Disable spawning for all spawn volumes */
-    //void ToggleSpawnVolumes(bool Toggle);
-     
+         
     /** Spawn an energy  */
     void SpawnEnergy();
 

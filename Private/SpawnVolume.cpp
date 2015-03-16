@@ -8,7 +8,6 @@
 // Difficulty caps
 const float SPAWN_DISTANCE_MAX = 25000.0f;
 const float SPAWN_SPEED_MAX = 40.0f;
-//const float SPAWN_DELAY_MAX = 13.0f;
 
 ASpawnVolume::ASpawnVolume(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -17,20 +16,13 @@ ASpawnVolume::ASpawnVolume(const FObjectInitializer& ObjectInitializer) : Super(
 
     // Set the StaticMeshComponent as the root component
     RootComponent = WhereToSpawn;
-
-    // Set the spawn delay range and get the first SpawnDelay
-    //SpawnDelay = 50.0f;
-    //SpawnDelayMultiplier = 1.0f;
-    
+        
     // Set the default speed level for the spawning objects
     SpawnedSpeedLevel = 5.0f;
 
     // Set the default speed increment
     SpeedIncrement = 0.5f;
-
-    // Set the default spawn delay decrement
-    //SpawnDelayDecrement = 1.0f;
-
+    
     // Set the default spawn distance values
     SpawnDistance = 14000.0f;
     SpawnDistanceIncrement = 500.0f;
@@ -82,13 +74,6 @@ void ASpawnVolume::SpawnPickup()
 
             // Increment the spawn counter
             SpawnCounter++;
-
-            // Stop spawning if maximum is reached in the early game
-            //APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-            //if (MyGameMode->GetCurrentState() == EPrototypePlayState::EEarlyGame && SpawnCounter >= MyGameMode->EnergyMax)
-            //{
-            //    ToggleSpawning(false);
-            //}
         }
     }
 }
@@ -139,71 +124,7 @@ FVector ASpawnVolume::GetRandomPointInVolume()
 
 void ASpawnVolume::Tick(float DeltaSeconds)
 {
-    // If spawning is not enabled, do nothing
-    /*if (!bSpawningEnabled)
-        return;
-
-    // Always add delta time to our Spawn Time
-    SpawnTime += DeltaSeconds * SpawnDelayMultiplier;
-
-    //bool bShouldSpawn = (SpawnTime > SpawnDelay);
-
-    if (bShouldSpawn)
-    {
-        SpawnPickup();
-
-        // Reset spawn timer
-        SpawnTime = 0.0f;
-        SpawnDelayMultiplier = 1.0f;
-
-        // Reduce spawn delay per spawn
-        SpawnDelay = SpawnDelay <= SPAWN_DELAY_MAX ? SPAWN_DELAY_MAX : SpawnDelay - SpawnDelayDecrement;
-
-        // Increment the spawn distance per spawn but not over threshold
-        SpawnDistance = SpawnDistance >= SPAWN_DISTANCE_MAX ? SPAWN_DISTANCE_MAX : SpawnDistance + SpawnDistanceIncrement;
-    }*/
 }
-/*
-void ASpawnVolume::ToggleSpawning(bool Toggle)
-{
-    bSpawningEnabled = Toggle;
-
-    // If early game, spawn now
-    APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-    if (MyGameMode->GetCurrentState() == EPrototypePlayState::EEarlyGame)
-    {
-        // Spawn pickup after a 1 second delay
-        FTimerHandle UniqueHandle;
-        FTimerDelegate RespawnDelegate = FTimerDelegate::CreateUObject(this, &ASpawnVolume::SpawnPickup);
-        GetWorldTimerManager().SetTimer(UniqueHandle, RespawnDelegate, 1.f, false);
-
-        SpawnPickup();
-        // Start spawning immediately
-        //SpawnTime = SpawnDelay;
-    }
-    else if (MyGameMode->GetCurrentState() == EPrototypePlayState::ELateGame)
-    {
-        // Spawn pickup after a 10 second delay
-        FTimerHandle UniqueHandle;
-        FTimerDelegate RespawnDelegate = FTimerDelegate::CreateUObject(this, &ASpawnVolume::SpawnPickup);
-        GetWorldTimerManager().SetTimer(UniqueHandle, RespawnDelegate, 10.f, false);
-
-        // Start spawning soon
-        //SpawnTime = SpawnDelay / 2;
-    }    
-}*/
-
-/*void ASpawnVolume::AdjustSpawnDelay()
-{
-    // best = 20x, worst = 1x
-    SpawnDelayMultiplier = SpawnDelay / SpawnTime;
-}*/
-
-/*void ASpawnVolume::AdjustSpawnSpeed()
-{
-    // best = 20x, worst = 1x
-    SpawnDelayMultiplier = SpawnDelay / SpawnTime;
-}*/
 
 
 

@@ -24,7 +24,7 @@ void ADeathFloor::Tick(float DeltaSeconds)
     // Count time
     TimerDelay += DeltaSeconds;
 
-    // Execute tick each 0.5 second
+    // Execute tick each 0.1 second
     if (TimerDelay > 0.1f)
     {
         // Reset timer
@@ -33,13 +33,15 @@ void ADeathFloor::Tick(float DeltaSeconds)
         // Get all overlapping Actors and store them in a CollectedActors array
         TArray<AActor*> CollectedActors;
         DeathFloorCollider->GetOverlappingActors(CollectedActors);
-
+        
         // For each actor collected
-        for (int32 iCollected = 0; iCollected < CollectedActors.Num(); ++iCollected)
+        //auto Component : CollectedComponents
+        //for (int32 iCollected = 0; iCollected < CollectedActors.Num(); ++iCollected)
+        for (auto actor : CollectedActors)
         {
             // * ENERGY *
             // Cast the collected actor to AEnergyPickup
-            AEnergyPickup* const TestEnergy = Cast<AEnergyPickup>(CollectedActors[iCollected]);
+            AEnergyPickup* const TestEnergy = Cast<AEnergyPickup>(actor);
 
             // if the cast is successful, and the energy is valid and active
             if (TestEnergy && !TestEnergy->IsPendingKill() && TestEnergy->bIsActive)
@@ -49,15 +51,24 @@ void ADeathFloor::Tick(float DeltaSeconds)
 
             // * PLAYER *
             // Cast the collected actor to APrototypeCharacter
-            APrototypeCharacter* const TestCharacter = Cast<APrototypeCharacter>(CollectedActors[iCollected]);
-            
-            //bIsScanning = (testHitResult.GetActor() && testHitResult.GetActor()->GetClass()->IsChildOf(AEnergyPickup::StaticClass()));
-            //CollectedActors[iCollected]->GetClass()->IsChildOf()
+            APrototypeCharacter* const TestCharacter = Cast<APrototypeCharacter>(actor);
 
-            // if the cast is successful, and the player is valid and active
+            // If player and not dead
             if (TestCharacter && !TestCharacter->IsPendingKill() && !TestCharacter->bIsDead)
             {
-                TestCharacter->Die();
+                // Check overlap with CapsuleComponent of character
+                TArray<UPrimitiveComponent*> CollectedComponents;
+                TestCharacter->GetCapsuleComponent()->GetOverlappingComponents(CollectedComponents);
+
+                // For each overlapping components with the capsule
+                for (auto Component : CollectedComponents)
+                {
+                    if (Component == DeathFloorCollider)
+                    {
+                        TestCharacter->Die();
+                        break;
+                    }
+                }
             }
         }
     }   

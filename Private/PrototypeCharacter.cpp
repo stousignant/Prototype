@@ -6,6 +6,7 @@
 #include "EnergyPickup.h"
 #include "PowerPickup.h"
 #include "PrototypeGameMode.h"
+#include "PrototypeHUD.h"
 
 // Debug example
 //GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("testHitResult.GetComponent() (%s)"), *testHitResult.GetComponent()->GetName()));
@@ -85,9 +86,13 @@ APrototypeCharacter::APrototypeCharacter(const FObjectInitializer& ObjectInitial
     ScanDistance = 5000.f;
 
     // Ten seconds renews respawn position
-    RespawnSaveDelay = 600.f;
+    RespawnSaveDelay = 10.f;
     // Store a first respawn position when created
     RespawnSaveTimer = RespawnSaveDelay;
+    RespawnSaveFailnetTimer = RespawnSaveDelay;
+
+    // Pause variable
+    bIsGamePaused = false;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -119,11 +124,6 @@ void APrototypeCharacter::Tick(float DeltaSeconds)
 
     // Manage the powerup detection
     UpdatePowerupDetection(DeltaSeconds);
-
-
-    // TEST DEBUG
-    //FVector AimStartingPoint = GetActorLocation() + CameraRelativePosition;
-    //DrawDebugLine(GetWorld(), AimStartingPoint + FVector(0, 0, -5), GetActorLocation() + GetCharacterMovement()->GetLastInputVector() * WallRideDistance, FColor(255,255,255));
 }
 
 void APrototypeCharacter::UpdateRun(float DeltaSeconds)
@@ -171,7 +171,7 @@ void APrototypeCharacter::UpdateStamina(float DeltaSeconds)
     if (bIsDashing)
     {
         // Remove stamina
-        float StaminaDrainWithDelta = StaminaDrain * DeltaSeconds * 60.0f;
+        float StaminaDrainWithDelta = StaminaDrain * DeltaSeconds * 60.0f / 2.0f;
         StaminaCurrent = (StaminaCurrent - StaminaDrainWithDelta < 0) ? 0 : StaminaCurrent - StaminaDrainWithDelta;
         
         if (StaminaCurrent <= 0)
@@ -274,11 +274,18 @@ void APrototypeCharacter::UpdateRespawnPoint(float DeltaSeconds)
     APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
     if (MyGameMode->GetCurrentState() == EPrototypePlayState::EEarlyGame || MyGameMode->GetCurrentState() == EPrototypePlayState::ELateGame)
     {
-        RespawnSaveTimer++;
-        if (RespawnSaveTimer >= RespawnSaveDelay && !GetCharacterMovement()->IsFalling())
+        RespawnSaveTimer += DeltaSeconds;
+        if (RespawnSaveTimer >= RespawnSaveDelay && !GetCharacterMovement()->IsFalling() && !bIsDead && !bIsCrouched)
         {
-            RespawnPosition = GetActorLocation();
-            RespawnSaveTimer = 0.f;
+            // Ensure respawn point is safe by waiting 2.0 seconds when character is grounded
+            RespawnSaveFailnetTimer += DeltaSeconds;
+
+            if (RespawnSaveFailnetTimer >= 2.0f)
+            {
+                RespawnPosition = GetActorLocation();
+                RespawnSaveTimer = 0.0f;
+                RespawnSaveFailnetTimer = 0.0f;
+            }            
         }
     }    
 }
@@ -359,10 +366,17 @@ void APrototypeCharacter::UpdateScan(float DeltaSeconds)
                 ExperiencePoints -= 100.0f;                
             }
             
+            APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
+            APrototypeHUD* MyGameHUD = Cast<APrototypeHUD>(PlayerController->GetHUD());
             // If leveled up
             if (ExperiencePoints == 100.0f)
             {
                 LevelUp();
+                MyGameHUD->bShowLevelUp = true;
+            }
+            else
+            {
+                MyGameHUD->bShowXPGain = true;
             }
 
             // Play energy sound
@@ -391,7 +405,8 @@ void APrototypeCharacter::UpdateSlide(float DeltaSeconds)
     {
         SetSliding(false);
     }
-    else if (!bIsCrouched)
+    // If slide is interrupted from releasing crouch
+    else if (bIsSliding && !bIsCrouched)
     {
         SetSliding(false);
     }
@@ -457,6 +472,8 @@ void APrototypeCharacter::SetupPlayerInputComponent(class UInputComponent* Input
     InputComponent->BindAction("ExitGame", IE_Pressed, this, &APrototypeCharacter::OnExitGamePressed);
     InputComponent->BindAction("RestartGame", IE_Pressed, this, &APrototypeCharacter::OnRestartGamePressed);
     InputComponent->BindAction("ContinueGame", IE_Pressed, this, &APrototypeCharacter::OnContinueGamePressed);
+    FInputActionBinding& PauseToggle = InputComponent->BindAction("PauseGame", IE_Pressed, this, &APrototypeCharacter::OnPauseGamePressed);
+    PauseToggle.bExecuteWhenPaused = true;
 	
 	InputComponent->BindAxis("MoveForward", this, &APrototypeCharacter::OnMoveForward);
 	InputComponent->BindAxis("MoveRight", this, &APrototypeCharacter::OnMoveRight);
@@ -818,6 +835,13 @@ void APrototypeCharacter::OnContinueGamePressed()
     }
 }
 
+void APrototypeCharacter::OnPauseGamePressed()
+{
+    APlayerController* const MyPlayer = Cast<APlayerController>(GEngine->GetFirstLocalPlayerController(GetWorld()));
+    MyPlayer->SetPause(!bIsGamePaused);
+    bIsGamePaused = !bIsGamePaused; 
+}
+
 void APrototypeCharacter::MissingStamina()
 {
     // Show missing stamina for 2 seconds
@@ -830,6 +854,15 @@ void APrototypeCharacter::MissingStamina()
 void APrototypeCharacter::System0731()
 {
     bIsHackingPowerups = !bIsHackingPowerups;
+
+    // Upgrade all to double max
+    SpeedPowerLevel = MAX_LEVEL * 2 - 1;
+    JumpPowerLevel = MAX_LEVEL * 2 - 1;
+    StaminaPowerLevel = MAX_LEVEL * 2 - 1;
+
+    OnUpgradePower1Pressed();
+    OnUpgradePower2Pressed();
+    OnUpgradePower3Pressed();
 }
 
 

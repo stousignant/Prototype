@@ -20,6 +20,10 @@ APrototypeHUD::APrototypeHUD(const FObjectInitializer& ObjectInitializer) : Supe
     // Use the RobotoDistanceField font from the engine
     static ConstructorHelpers::FObjectFinder<UFont>HUDFontOb(TEXT("/Engine/EngineFonts/RobotoDistanceField"));
     HUDFont = HUDFontOb.Object;
+
+    // Default
+    bShowXPGain = false;
+    bShowLevelUp = false;
 }
 
 void APrototypeHUD::DrawHUD()
@@ -74,10 +78,10 @@ void APrototypeHUD::DrawPlayerInfo()
     // Print missing stamina
     if (MyCharacter->bIsMissingStamina)
     {
-        FString MissingStaminaString = FString::Printf(TEXT("Missing Stamina"));
+        FString MissingStaminaString = FString::Printf(TEXT("Not enough Stamina"));
         FVector2D MissingStaminaStringSize;
         GetTextSize(MissingStaminaString, MissingStaminaStringSize.X, MissingStaminaStringSize.Y, HUDFont);
-        DrawText(MissingStaminaString, FColor::Red, (ScreenDimensions.X - MissingStaminaStringSize.X) / 2.0f, (ScreenDimensions.Y - MissingStaminaStringSize.Y) / 2.0f, HUDFont);
+        DrawText(MissingStaminaString, FColor::Red, (ScreenDimensions.X / LEFTSIDE_X), (ScreenDimensions.Y / UPSIDE_Y) + SpeedStringSize.Y + MissingStaminaStringSize.Y, HUDFont);
     }
 
     // Print respawn
@@ -105,9 +109,7 @@ void APrototypeHUD::DrawPlayerInfo()
         FVector2D CrouchStringSize;
         GetTextSize(CrouchString, CrouchStringSize.X, CrouchStringSize.Y, HUDFont);
         DrawText(CrouchString, FColor::Red, (ScreenDimensions.X / RIGHTSIDE_X) - CrouchStringSize.X, (ScreenDimensions.Y / DOWNSIDE_Y) - CrouchStringSize.Y * 2, HUDFont);
-    }
-
-    
+    }    
 }
 
 void APrototypeHUD::DrawPlayerPowers()
@@ -125,6 +127,26 @@ void APrototypeHUD::DrawPlayerPowers()
     GetTextSize(ExperiencePointsString, ExperiencePointsStringSize.X, ExperiencePointsStringSize.Y, HUDFont);
     DrawText(ExperiencePointsString, FXPColor, (ScreenDimensions.X / LEFTSIDE_X), (ScreenDimensions.Y / DOWNSIDE_Y) + ExperiencePointsStringSize.Y, HUDFont);
     DrawRect(FXPColor, (ScreenDimensions.X / LEFTSIDE_X) + ExperiencePointsStringSize.X + 5, (ScreenDimensions.Y / DOWNSIDE_Y) + ExperiencePointsStringSize.Y + 7, (ScreenDimensions.X / 263) * MyCharacter->ExperiencePoints, 10);
+
+    // Print xp gain or level up
+    if (bShowXPGain || bShowLevelUp)
+    {
+        FString XPGainString;
+        XPGainString = (bShowXPGain) ? FString::Printf(TEXT("+20 XP")) : FString::Printf(TEXT("Level up!"));
+        FVector2D XPGainStringSize;
+        GetTextSize(XPGainString, XPGainStringSize.X, XPGainStringSize.Y, HUDFont);
+        DrawText(XPGainString, FColor::Cyan, (ScreenDimensions.X - XPGainStringSize.X) / 2.0f, (ScreenDimensions.Y / DOWNSIDE_Y), HUDFont);
+
+        // Timer for 3 seconds
+        XPGainTimer++;
+
+        // Hide xp gain
+        if (XPGainTimer >= 180.0f)
+        {
+            bShowXPGain = false;
+            bShowLevelUp = false;
+        }
+    }
 
     // Print stamina power
     FString StaminaLevelString = FString::Printf(TEXT("Stamina Lv.%0.f"), MyCharacter->StaminaPowerLevel);
@@ -168,7 +190,15 @@ void APrototypeHUD::DrawGameInfo()
     APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
     
     // Print the energy count
-    FString EnergyCountString = FString::Printf(TEXT("%0.0f/%0.0f Energy absorbed"), MyGameMode->GetEnergyCount(), MyGameMode->EnergyMax);
+    FString EnergyCountString;
+    if (MyGameMode->GetCurrentState() == EPrototypePlayState::EEarlyGame || MyGameMode->GetCurrentState() == EPrototypePlayState::ETutorial)
+    {
+        EnergyCountString = FString::Printf(TEXT("%0.0f/%0.0f Energy absorbed"), MyGameMode->GetEnergyCount(), MyGameMode->EnergyMax);
+    }
+    else
+    {
+        EnergyCountString = FString::Printf(TEXT("%0.0f Energy absorbed"), MyGameMode->GetEnergyCount());
+    }
     FVector2D EnergyCountStringSize;
     GetTextSize(EnergyCountString, EnergyCountStringSize.X, EnergyCountStringSize.Y, HUDFont);
     DrawText(EnergyCountString, FColor::Cyan, (ScreenDimensions.X / RIGHTSIDE_X) - EnergyCountStringSize.X, (ScreenDimensions.Y / UPSIDE_Y), HUDFont);
@@ -244,8 +274,8 @@ void APrototypeHUD::DrawGameOver()
 {
     // Print the Game over text
     FVector2D GameOverSize;
-    GetTextSize(TEXT("Mission failed"), GameOverSize.X, GameOverSize.Y, HUDFont);
-    DrawText(TEXT("Mission failed"), FColor::White, (ScreenDimensions.X - GameOverSize.X) / 2.0f, (ScreenDimensions.Y - GameOverSize.Y) / 2.0f, HUDFont);
+    GetTextSize(TEXT("MISSION FAILED"), GameOverSize.X, GameOverSize.Y, HUDFont);
+    DrawText(TEXT("MISSION FAILED"), FColor::Red, (ScreenDimensions.X - GameOverSize.X) / 2.0f, (ScreenDimensions.Y - GameOverSize.Y) / 2.0f, HUDFont);
 
     // Print the highscore
     FString HighscoreString = FString::Printf(TEXT("Your highscore is %0.0f with %02.0f:%02.0f"), MyGameMode->GetEnergyCount(), floor(MyGameMode->GameTime / 60.0f), fmod(MyGameMode->GameTime, 60.0f));
@@ -259,7 +289,7 @@ void APrototypeHUD::DrawGameOver()
     GetTextSize(RestartString, RestartStringSize.X, RestartStringSize.Y, HUDFont);
     DrawText(RestartString, FColor::Blue, (ScreenDimensions.X - RestartStringSize.X) / 2.0f, (ScreenDimensions.Y - RestartStringSize.Y) / 2.0f + GameOverSize.Y + HighscoreStringSize.Y, HUDFont);
 
-    FString ExitString = FString::Printf(TEXT("Proceed to the evacuation (escape)"));
+    FString ExitString = FString::Printf(TEXT("Proceed to the evacuation (F4)"));
     FVector2D ExitStringSize;
     GetTextSize(ExitString, ExitStringSize.X, ExitStringSize.Y, HUDFont);
     DrawText(ExitString, FColor::Blue, (ScreenDimensions.X - ExitStringSize.X) / 2.0f, (ScreenDimensions.Y - ExitStringSize.Y) / 2.0f + GameOverSize.Y + HighscoreStringSize.Y + RestartStringSize.Y, HUDFont);
@@ -269,8 +299,8 @@ void APrototypeHUD::DrawGameWon()
 {
     // Print the Game won text
     FVector2D GameWonSize;
-    GetTextSize(TEXT("Mission success!"), GameWonSize.X, GameWonSize.Y, HUDFont);
-    DrawText(TEXT("Mission success!"), FColor::White, (ScreenDimensions.X - GameWonSize.X) / 2.0f, (ScreenDimensions.Y - GameWonSize.Y) / 2.0f, HUDFont);
+    GetTextSize(TEXT("MISSION SUCCESS!"), GameWonSize.X, GameWonSize.Y, HUDFont);
+    DrawText(TEXT("MISSION SUCCESS!"), FColor::Green, (ScreenDimensions.X - GameWonSize.X) / 2.0f, (ScreenDimensions.Y - GameWonSize.Y) / 2.0f, HUDFont);
 
     // Print the options
     FString ContinueString = FString::Printf(TEXT("Continue mission (enter)"));
@@ -283,7 +313,7 @@ void APrototypeHUD::DrawGameWon()
     GetTextSize(RestartString, RestartStringSize.X, RestartStringSize.Y, HUDFont);
     DrawText(RestartString, FColor::Blue, (ScreenDimensions.X - RestartStringSize.X) / 2.0f, (ScreenDimensions.Y - RestartStringSize.Y) / 2.0f + GameWonSize.Y + ContinueStringSize.Y, HUDFont);
 
-    FString ExitString = FString::Printf(TEXT("Proceed to the evacuation (escape)"));
+    FString ExitString = FString::Printf(TEXT("Proceed to the evacuation (F4)"));
     FVector2D ExitStringSize;
     GetTextSize(ExitString, ExitStringSize.X, ExitStringSize.Y, HUDFont);
     DrawText(ExitString, FColor::Blue, (ScreenDimensions.X - ExitStringSize.X) / 2.0f, (ScreenDimensions.Y - ExitStringSize.Y) / 2.0f + GameWonSize.Y + ContinueStringSize.Y + RestartStringSize.Y, HUDFont);

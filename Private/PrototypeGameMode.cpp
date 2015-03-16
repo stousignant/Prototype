@@ -161,9 +161,6 @@ void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
     //
     case EPrototypePlayState::EGameOver:
     {
-        // If the game is over, the spawn volumes should deactivate
-        //ToggleSpawnVolumes(false);
-
         APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
         PlayerController->SetCinematicMode(true, true, false);
     }
@@ -174,9 +171,6 @@ void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
         // Get the character and block mouvement
         APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
         MyCharacter->bMovementBlocked = true;
-        
-        // If the game is won, the spawn volumes should deactivate
-        //ToggleSpawnVolumes(false);
     }
     break;
     //
@@ -185,9 +179,6 @@ void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
         // Get the character and unblock mouvement
         APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
         MyCharacter->bMovementBlocked = false;
-        
-        // If the game is won, the spawn volumes should deactivate
-        //ToggleSpawnVolumes(true);
     }
     break;
     // 
@@ -225,24 +216,6 @@ void APrototypeGameMode::BeginPlay()
 
     SetCurrentState(EPrototypePlayState::ETutorial);
 }
-
-/*void APrototypeGameMode::ToggleSpawnVolumes(bool Toggle)
-{
-    // Find all spawn volume actors
-    TArray<AActor*> FoundSpawnVolumeActors;
-
-    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ASpawnVolume::StaticClass(), FoundSpawnVolumeActors);
-
-    // Enable spawning for each spawn volume
-    for (auto Actor : FoundSpawnVolumeActors)
-    {
-        ASpawnVolume* SpawnVolumeActor = Cast<ASpawnVolume>(Actor);
-        if (SpawnVolumeActor)
-        {
-            SpawnVolumeActor->ToggleSpawning(Toggle);            
-        }
-    }
-}*/
 
 void APrototypeGameMode::SpawnEnergyWithDelay()
 {

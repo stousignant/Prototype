@@ -47,5 +47,14 @@ public:
     /** Scanning progress value */
     float ScanProgress;
 
+    /** */
+    bool bShowXPGain;
+
+    /** */
+    bool bShowLevelUp;
+
+    /** */
+    float XPGainTimer;
+
 };
 

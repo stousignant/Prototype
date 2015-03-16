@@ -248,6 +248,9 @@ public:
 
     /** Player pressed the continue game key */
     void OnContinueGamePressed();
+
+    /** Player pressed the pause game key */
+    void OnPauseGamePressed();
     
     //////////////////////////////////////////////////////////////////////////
     // Base Movement Override
@@ -425,6 +428,10 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Spawning)
     float RespawnSaveTimer;
 
+    /** Timer used to ensure the new espawn point is safe */
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Spawning)
+    float RespawnSaveFailnetTimer;
+
     /** Respawns the character */
     UFUNCTION(BlueprintCallable, Category = Spawning)
     void Die();
@@ -455,6 +462,9 @@ public:
     /** Hack powerups */
     UFUNCTION(Exec)
     void System0731();
+
+    /** If game is paused */
+    bool bIsGamePaused;
         
 
 protected:
