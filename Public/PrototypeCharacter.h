@@ -43,6 +43,12 @@ public:
     /** Powerup detection update */
     void UpdatePowerupDetection(float DeltaSeconds);
 
+    /** Manage the wind speed sound */
+    void UpdateSound(float DeltaSeconds);
+
+    /** Manage the overload */
+    void UpdateOverload(float DeltaSeconds);
+
 
     //////////////////////////////////////////////////////////////////////////
     // Camera & aim
@@ -53,15 +59,7 @@ public:
     /** Camera position relative to the character's position */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
     FVector CameraRelativePosition;
-
-    /** Distance of the trace for scanning */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Scan)
-    float ScanDistance;
-
-    /** Scan amount in order to end */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Scan)
-    float ScanMaximum;
-
+    
     /** Scan starting offset for HUD */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Scan)
     float ScanOffset1;
@@ -72,6 +70,9 @@ public:
 
     /** If the character is currently pressing the scan input */
     bool bWantsToScan;
+
+    /** Distance of the trace for scanning */
+    float ScanDistance;
 
     /** If the character is currently scanning an energy sphere */
     bool bIsScanning;
@@ -143,6 +144,32 @@ public:
     /** Current crouch state */
     UPROPERTY(Transient)
     bool bWantsToCrouch;
+
+    /** If player started overload action */
+    UPROPERTY(Transient)
+    bool bOverloadStarted;
+
+    /** If overload action ended*/
+    UPROPERTY(Transient)
+    bool bOverloadEnded;
+
+    /** If character is in overload state */
+    bool bIsOverloaded;
+
+    /** */
+    float OverloadCooldownTimer;
+
+    /** */
+    float OverloadCooldownDuration;
+
+    /** If character has activated overload */
+    bool bOverloadOnCooldown;
+
+    /** */
+    void StartOverload();
+
+    /** */
+    void EndOverload();
     
     /** If the character's movements are blocked */
     bool bMovementBlocked;
@@ -158,6 +185,18 @@ public:
     
     /** Amount of the current stamina */
     float StaminaCurrent;
+
+    /** Base Stamina drained from sliding */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
+    float SlideStaminaConsumption;
+
+    /** Base Stamina drained from dive */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
+    float DiveStaminaConsumption;
+
+    /** Base Stamina drained from dash jump */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
+    float DashJumpStaminaConsumption;
 
     /** Current wall riding state */
     UPROPERTY(Transient)
@@ -239,6 +278,9 @@ public:
 
     /** Player pressed upgrade power 3 action */
     void OnUpgradePower3Pressed();
+
+    /** Player pressed upgrade power 4 action */
+    void OnUpgradePower4Pressed();
 
     /** Player pressed the exit game key */
     void OnExitGamePressed();
@@ -326,9 +368,13 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
     class USoundBase* MissingStaminaSound;
 
-    /** Sound to play when leveling up */
+    /** Sound to play when leveling up with xp */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
-    class USoundBase* LevelUpSound;
+    class USoundBase* LevelUpXPSound;
+
+    /** Sound to play when leveling up with pickup */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
+    class USoundBase* LevelUpPickupSound;
 
     /** Handles sounds for running */
     void UpdateRunSounds(bool bNewRunning);
@@ -406,12 +452,52 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
     float StaminaPowerDefault;
 
+    /** Absorb power level of our character */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
+    float AbsorbPowerLevel;
+
+    /** Absorb time per level */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
+    float AbsorbPowerTimeIncrement;
+
+    /** Absorb time */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
+    float AbsorbPowerTime;
+
+    /** Absorb time for level 1 */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
+    float AbsorbPowerTimeDefault;
+
+    /** Absorb distance per level */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
+    float AbsorbPowerDistanceIncrement;
+
+    /** Absorb distance */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
+    float AbsorbPowerDistance;
+    
+    /** Absorb distance for level 1 */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
+    float AbsorbPowerDistanceDefault;
+        
     /** Experience */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
     float ExperiencePoints;
 
+    /** Experience gained per energy */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
+    float ExperiencePerEnergy;
+
+    /** Experience gained from the first energy */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
+    float ExperienceDefault;
+
+    /** Experience increment */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
+    float ExperienceIncrement;
+
     /** */
-    void LevelUp();    
+    void LevelUp(bool bLeveledUpWithXP);    
 
 
     //////////////////////////////////////////////////////////////////////////
@@ -422,7 +508,11 @@ public:
 
     /** Delay used between saves of respawn positions */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
-    float RespawnSaveDelay;
+    float RespawnSaveNormalDelay;
+
+    /** Delay used between saves of respawn positions while being overloaded */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
+    float RespawnSaveOverloadDelay;
 
     /** Timer used to save a new respawn point at each RespawnSaveDelay */
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Spawning)
@@ -431,6 +521,18 @@ public:
     /** Timer used to ensure the new espawn point is safe */
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Spawning)
     float RespawnSaveFailnetTimer;
+
+    /** Current duration to respawn */
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Spawning)
+    float RespawnTime;
+
+    /** Duration to respawn when not overloaded */
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Spawning)
+    float RespawnNormalTime;
+
+    /** Duration to respawn while being overloaded */
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Spawning)
+    float RespawnOverloadTime;
 
     /** Respawns the character */
     UFUNCTION(BlueprintCallable, Category = Spawning)
@@ -451,20 +553,27 @@ public:
     float WallRideDistance;
 
     /** Function used by the OnUpgradePowerXPressed */
-    void UpgradePower(float &PowerId);
+    void UpgradePower(float &PowerId, bool bIsNormal = true);
 
     /** Show that character is lacking stamina for action */
     void MissingStamina();
 
+    /** Overload command */
+    UFUNCTION(Exec)
+    void Overload();
+
     /** Is cheat for powerups on */
     bool bIsHackingPowerups;
 
-    /** Hack powerups */
+    /** Hack powerups command */
     UFUNCTION(Exec)
     void System0731();
 
     /** If game is paused */
     bool bIsGamePaused;
+
+    UFUNCTION(Exec)
+    void System0732();
         
 
 protected:

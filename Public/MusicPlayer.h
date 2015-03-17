@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PrototypeGameMode.h"
+#include "PrototypeCharacter.h"
 #include "GameFramework/Actor.h"
 #include "MusicPlayer.generated.h"
 
@@ -18,6 +18,9 @@ public:
     // Constructor
     AMusicPlayer(const FObjectInitializer& ObjectInitializer);
 
+    // Character reference
+    APrototypeCharacter* MyCharacter;
+
     // Tutorial song
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
     class USoundBase* TutorialMusic;
@@ -25,6 +28,9 @@ public:
     /** Used to manipulate with the tutorial music */
     UPROPERTY()
     UAudioComponent* TutorialMusicAC;
+
+    //
+    void PlayTutorialMusic();
 
     // Early Game song
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
@@ -34,6 +40,9 @@ public:
     UPROPERTY()
     UAudioComponent* EarlyGameMusicAC;
 
+    //
+    void PlayEarlyGameMusic();
+
     // Game over song
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
     class USoundBase* GameOverMusic;
@@ -41,6 +50,9 @@ public:
     /** Used to manipulate with the game over music */
     UPROPERTY()
     UAudioComponent* GameOverMusicAC;
+
+    //
+    void PlayGameOverMusic();
 
     // Game won song
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
@@ -50,6 +62,9 @@ public:
     UPROPERTY()
     UAudioComponent* GameWonMusicAC;
 
+    //
+    void PlayGameWonMusic();
+
     // Late Game song
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
     class USoundBase* LateGameMusic;
@@ -57,9 +72,33 @@ public:
     /** Used to manipulate with the late game music */
     UPROPERTY()
     UAudioComponent* LateGameMusicAC;
-	
-	// Play a song
-    void PlayMusic(EPrototypePlayState NewState);
-	
-	
+
+    //
+    void PlayLateGameMusic();
+
+    // Overload
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
+    class USoundBase* OverloadMusic;
+
+    // 
+    UPROPERTY()
+    UAudioComponent* OverloadMusicAC;
+
+    // Play overload music
+    void PlayOverloadMusic();
+
+    // Play overload music
+    void StopOverloadMusic();
+
+    //
+    bool bInterruptedEarlyGameMusic;
+
+    //
+    bool bInterruptedLateGameMusic;
+
+    //
+    //void StopAllMusic();
+
+    // Play a song
+    //void PlayMusic(short NewState);
 };

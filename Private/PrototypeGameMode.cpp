@@ -7,8 +7,6 @@
 #include "Kismet/GameplayStatics.h"
 #include "Engine.h"
 
-const float BEST_TUTORIAL_TIME_ATTACK = 9.49f;
-
 APrototypeGameMode::APrototypeGameMode(const FObjectInitializer& ObjectInitializer)	: Super(ObjectInitializer)
 {
 	// Set default pawn class to our Blueprinted character
@@ -24,42 +22,30 @@ APrototypeGameMode::APrototypeGameMode(const FObjectInitializer& ObjectInitializ
     ExplosionMax = 3.0f;
     ExplosionCount = 0.0f;  
 
+    // Game timer
     GameTime = 0.0f;
-    TutorialCurrentTimeAttack = 0.0f;
-    TutorialBestTimeAttack = BEST_TUTORIAL_TIME_ATTACK;
-    TutorialTimeAttackTimer = 0.0;
-    bShowTutorialTimeAttack = false;
 
+    // Explosion
     ExplosionWarningTimer = 0.0;
     bShowExplosionWarning = false;
 
+    // Basic actors
     bIsSpawnVolumeSet = false;
+    bIsMusicPlayerSet = false;
+
+    // Overload
+    bOverloadMusicStarted = false;
 }
 
 void APrototypeGameMode::Tick(float DeltaSeconds)
 {
-    // Accumulate time for tutorial time attack
-    if (GetCurrentState() == EPrototypePlayState::ETutorial)
-    {
-        TutorialCurrentTimeAttack += DeltaSeconds;
-    }
-
+    // Update for overload check
+    UpdateOverload();
+    
     // Accumulate time for game time
     if (GetCurrentState() == EPrototypePlayState::EEarlyGame || GetCurrentState() == EPrototypePlayState::ELateGame)
     {
         GameTime += DeltaSeconds;
-    }
-
-    // Show tutorial time attack results
-    if (TutorialTimeAttackTimer > 0.0f)
-    {
-        TutorialTimeAttackTimer -= DeltaSeconds;
-        bShowTutorialTimeAttack = true;
-
-        if (TutorialTimeAttackTimer <= 0.0f)
-        {
-            bShowTutorialTimeAttack = false;
-        }
     }
 
     // Show explosion warning
@@ -73,8 +59,38 @@ void APrototypeGameMode::Tick(float DeltaSeconds)
             bShowExplosionWarning = false;
         }
     }
+    
+    // Set basic actors
+    SetSpawnVolumeActor();
+    SetMusicPlayerActor();
+}
 
-    // Find spawn volume
+void APrototypeGameMode::UpdateOverload()
+{
+    // Overload
+    APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+
+    if (!bOverloadMusicStarted)
+    {
+        if (MyCharacter->bOverloadStarted)
+        {
+            MusicPlayerActor->PlayOverloadMusic();
+            bOverloadMusicStarted = true;
+        }
+    }
+
+    if (MyCharacter->bOverloadEnded)
+    {
+        MusicPlayerActor->StopOverloadMusic();
+        bOverloadMusicStarted = false;
+
+        MyCharacter->bOverloadEnded = false;
+    }
+}
+
+void APrototypeGameMode::SetSpawnVolumeActor()
+{
+    // Find spawn volume actor
     if (!bIsSpawnVolumeSet)
     {
         TArray<AActor*> FoundSpawnVolumeActors;
@@ -87,7 +103,25 @@ void APrototypeGameMode::Tick(float DeltaSeconds)
             SpawnVolumeActor = Cast<ASpawnVolume>(Actor);
             bIsSpawnVolumeSet = true;
         }
-    }    
+    }
+}
+
+void APrototypeGameMode::SetMusicPlayerActor()
+{
+    // Find the music player actor
+    if (!bIsMusicPlayerSet)
+    {
+        TArray<AActor*> FoundMusicPlayerActors;
+
+        UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMusicPlayer::StaticClass(), FoundMusicPlayerActors);
+
+        for (auto Actor : FoundMusicPlayerActors)
+        {
+            MusicPlayerActor = Cast<AMusicPlayer>(Actor);
+            MusicPlayerActor->PlayTutorialMusic();
+            bIsMusicPlayerSet = true;
+        }
+    }
 }
 
 float APrototypeGameMode::GetEnergyCount()
@@ -151,11 +185,11 @@ void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
     // When we're playing, the spawn volumes can spawn
     case EPrototypePlayState::EEarlyGame:
     {
-        // Show tutorial time attack for 4 seconds
-        TutorialTimeAttackTimer = 4.0f;
-
         // First pick up spawn
         SpawnEnergy();
+
+        // Play early game music
+        MusicPlayerActor->PlayEarlyGameMusic();
     }
     break;
     //
@@ -163,6 +197,9 @@ void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
     {
         APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
         PlayerController->SetCinematicMode(true, true, false);
+
+        // Play game over music
+        MusicPlayerActor->PlayGameOverMusic();
     }
     break;
     //
@@ -171,6 +208,9 @@ void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
         // Get the character and block mouvement
         APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
         MyCharacter->bMovementBlocked = true;
+
+        // Play game won music
+        MusicPlayerActor->PlayGameWonMusic();
     }
     break;
     //
@@ -179,6 +219,9 @@ void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
         // Get the character and unblock mouvement
         APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
         MyCharacter->bMovementBlocked = false;
+
+        // Play late game music
+        MusicPlayerActor->PlayLateGameMusic();
     }
     break;
     // 
@@ -192,21 +235,6 @@ void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
         // Do nothing
     }
     break;
-    }
-
-    // Play music related to the play state
-    // Find the music player actor
-    TArray<AActor*> FoundMusicPlayerActors;
-
-    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMusicPlayer::StaticClass(), FoundMusicPlayerActors);
-
-    for (auto Actor : FoundMusicPlayerActors)
-    {
-        AMusicPlayer* MusicPlayerActor = Cast<AMusicPlayer>(Actor);
-        if (MusicPlayerActor)
-        {
-            MusicPlayerActor->PlayMusic(NewState);
-        }
     }
 }
 

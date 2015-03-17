@@ -10,7 +10,7 @@
 
 // Debug example
 //GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("testHitResult.GetComponent() (%s)"), *testHitResult.GetComponent()->GetName()));
-//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("GetActorRotation (%f,%f,%f)"), GetActorRotation().Vector().X, GetActorRotation().Vector().Y, GetActorRotation().Vector().Z));
+//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("GetActorRotation (%f)"), GetActorRotation().Vector().X));
 //GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("This is an on screen message!"));
 
 const int MAX_LEVEL = 15;
@@ -33,30 +33,54 @@ APrototypeCharacter::APrototypeCharacter(const FObjectInitializer& ObjectInitial
 
     // Set scan variables
     bIsScanning = false;
-    ScanMaximum = 1.0f; // in seconds
     EnergyCount = 0.0f;
     ScanOffset1 = 100.0f;
     ScanOffset2 = 10.0f;
 
     // Set power variables
-    SpeedPowerDefault = 1500.0f;
     SpeedPowerLevel = 1.0f;
+    SpeedPowerDefault = 1500.0f;
     SpeedPowerIncrement = 150.0f;
     AccelerationPowerDefault = 3000.0f;
     AccelerationPowerIncrement = 500.0f;
-    JumpPowerDefault = 1800.0f;
+
     JumpPowerLevel = 1.0f;
+    JumpPowerDefault = 1800.0f;
     JumpPowerIncrement = 125.0f;
-    StaminaPowerDefault = 1.0f;
+
     StaminaPowerLevel = 1.0f;
-    StaminaPowerIncrement = 0.075f;
+    StaminaPowerDefault = 1.0f;
+    StaminaPowerIncrement = 0.05f;
+
+    AbsorbPowerLevel = 1.0f;
+    AbsorbPowerTimeDefault = 4.0f; // 4 secs
+    AbsorbPowerTime = AbsorbPowerTimeDefault;
+    AbsorbPowerTimeIncrement = 0.5f;
+    AbsorbPowerDistanceDefault = 2000.0f;
+    AbsorbPowerDistance = AbsorbPowerDistanceDefault;
+    AbsorbPowerDistanceIncrement = 500.0f;
+
     PowerupDetectionTimer = 0.0f;
+
+    // Set experience variables
     ExperiencePoints = 0.0f;
+    ExperienceDefault = 15.0f;
+    ExperiencePerEnergy = ExperienceDefault;
+    ExperienceIncrement = 1.0f;
 
     // Set default power values
     RunSpeed = SpeedPowerDefault;
+    GetCharacterMovement()->MaxWalkSpeedCrouched = RunSpeed / 3;
     GetCharacterMovement()->JumpZVelocity = JumpPowerDefault;
     StaminaDrain = StaminaPowerDefault;
+
+    // Overload
+    bOverloadStarted = false;
+    bOverloadEnded = false;
+    bOverloadOnCooldown = false;
+    bIsOverloaded = false;
+    OverloadCooldownDuration = 120.0f; // 2 mins
+    OverloadCooldownTimer = 0.0f;
 
     // Set movement variables
     bIsRunning = false;
@@ -66,8 +90,12 @@ APrototypeCharacter::APrototypeCharacter(const FObjectInitializer& ObjectInitial
     bIsFast = false;
     StaminaMax = 100.0f;
     StaminaCurrent = StaminaMax;
+    StaminaReplenish = 0.1f;
     NormalAccel = AccelerationPowerDefault;
     WallRideDistance = 1000.0f;
+    SlideStaminaConsumption = 30.0f;
+    DiveStaminaConsumption = 30.0f;
+    DashJumpStaminaConsumption = 60.0f;
 
     // Set misc variables
     WindControlModifier = 3999;
@@ -82,14 +110,15 @@ APrototypeCharacter::APrototypeCharacter(const FObjectInitializer& ObjectInitial
     FirstPersonCameraComponent->RelativeLocation = CameraRelativePosition; // Position the camera
 	FirstPersonCameraComponent->bUsePawnControlRotation = true;
     
-    // Distance of the scan
-    ScanDistance = 5000.f;
-
     // Ten seconds renews respawn position
-    RespawnSaveDelay = 10.f;
+    RespawnSaveNormalDelay = 10.f;
+    RespawnSaveOverloadDelay = 1.f;
     // Store a first respawn position when created
-    RespawnSaveTimer = RespawnSaveDelay;
-    RespawnSaveFailnetTimer = RespawnSaveDelay;
+    RespawnSaveTimer = RespawnSaveNormalDelay;
+    RespawnSaveFailnetTimer = RespawnSaveNormalDelay;
+    RespawnNormalTime = 2.0f;
+    RespawnOverloadTime = 0.5f;
+    RespawnTime = RespawnNormalTime;
 
     // Pause variable
     bIsGamePaused = false;
@@ -124,6 +153,12 @@ void APrototypeCharacter::Tick(float DeltaSeconds)
 
     // Manage the powerup detection
     UpdatePowerupDetection(DeltaSeconds);
+    
+    // Manage the wind speed sound
+    UpdateSound(DeltaSeconds);
+
+    // Manage the overload
+    UpdateOverload(DeltaSeconds);
 }
 
 void APrototypeCharacter::UpdateRun(float DeltaSeconds)
@@ -131,7 +166,7 @@ void APrototypeCharacter::UpdateRun(float DeltaSeconds)
     if (bIsRunning)
     {
         // Make sure the character is grounded and is moving
-        if (!GetCharacterMovement()->IsFalling() && GetCharacterMovement()->Velocity.Size() > WalkSpeed && !bIsDashing && !bIsSliding)
+        if (!GetCharacterMovement()->IsFalling() && GetCharacterMovement()->Velocity.Size() > WalkSpeed && !bIsDashing && !bIsSliding && !bIsCrouched)
         {
             // Play run sound
             UpdateRunSounds(true);
@@ -275,6 +310,9 @@ void APrototypeCharacter::UpdateRespawnPoint(float DeltaSeconds)
     if (MyGameMode->GetCurrentState() == EPrototypePlayState::EEarlyGame || MyGameMode->GetCurrentState() == EPrototypePlayState::ELateGame)
     {
         RespawnSaveTimer += DeltaSeconds;
+
+        float RespawnSaveDelay = (bIsOverloaded) ? RespawnSaveOverloadDelay : RespawnSaveNormalDelay;
+
         if (RespawnSaveTimer >= RespawnSaveDelay && !GetCharacterMovement()->IsFalling() && !bIsDead && !bIsCrouched)
         {
             // Ensure respawn point is safe by waiting 2.0 seconds when character is grounded
@@ -305,7 +343,7 @@ void APrototypeCharacter::UpdateScan(float DeltaSeconds)
     FVector AimStart;
     FRotator AimRotation;
     GetActorEyesViewPoint(AimStart, AimRotation);
-    FVector AimEnd = AimStart + AimRotation.Vector() * ScanDistance;
+    FVector AimEnd = AimStart + AimRotation.Vector() * AbsorbPowerDistance;
 
     ULineBatchComponent* const LineBatcher = GetWorld()->ForegroundLineBatcher;
 
@@ -329,10 +367,14 @@ void APrototypeCharacter::UpdateScan(float DeltaSeconds)
     {
         // If the trace has hit an energy sphere
         bIsScanning = (testHitResult.GetActor() && testHitResult.GetActor()->GetClass()->IsChildOf(AEnergyPickup::StaticClass()));
+
+        ScanDistance = FVector::Dist(GetActorLocation(), testHitResult.Location) / 200.0f;
     }
     else
     {
         bIsScanning = false;
+
+        ScanDistance = 0.0f;
     }
 
     // Progress of the scan
@@ -341,38 +383,41 @@ void APrototypeCharacter::UpdateScan(float DeltaSeconds)
         // If scan is hitting the energy
         if (testHitResult.GetComponent()->GetName() == "PickupMesh")
         {
-            ScanProgress += DeltaSeconds * 2.0f;
+            // Scanning center is x4 faster
+            ScanProgress += DeltaSeconds * 4;
         }
         // If scan is hitting the beam
         else if (testHitResult.GetComponent()->GetName() == "BeamMesh")
         {
-            ScanProgress += DeltaSeconds / 3.0f;
+            ScanProgress += DeltaSeconds;
         }
         
         // Scan completed
-        if (ScanProgress >= ScanMaximum)
+        if (ScanProgress >= AbsorbPowerTime)
         {
             // Call the on picked up function
             AEnergyPickup* const TestEnergy = Cast<AEnergyPickup>(testHitResult.GetActor());
             TestEnergy->Absorb();
 
-            // Increment xp
-            ExperiencePoints += 20.0f;
-
-            // If leveled up
-            if (ExperiencePoints > 100.0f)
-            {
-                // Decrease xp if he didn't put his stat from leveling up
-                ExperiencePoints -= 100.0f;                
-            }
-            
+            // Get HUD
             APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
             APrototypeHUD* MyGameHUD = Cast<APrototypeHUD>(PlayerController->GetHUD());
+
+            // Increment xp
+            ExperiencePoints += ExperiencePerEnergy;
+            ExperiencePerEnergy += ExperienceIncrement;
+
             // If leveled up
-            if (ExperiencePoints == 100.0f)
+            if (ExperiencePoints >= 100.0f)
             {
-                LevelUp();
+                // Level up
+                LevelUp(true);
+
+                // Show it
                 MyGameHUD->bShowLevelUp = true;
+
+                // Decrease xp if he didn't put his stat from leveling up
+                ExperiencePoints -= 100.0f;                
             }
             else
             {
@@ -440,6 +485,39 @@ void APrototypeCharacter::UpdatePowerupDetection(float DeltaSeconds)
     }
 }
 
+void APrototypeCharacter::UpdateSound(float DeltaSeconds)
+{
+    if (WindAC && WindAC->IsPlaying())
+    {
+        WindAC->SetVolumeMultiplier(GetCharacterMovement()->Velocity.Size() / WindControlModifier);
+    }
+}
+
+void APrototypeCharacter::UpdateOverload(float DeltaSeconds)
+{
+    if (bOverloadOnCooldown)
+    {
+        OverloadCooldownTimer += DeltaSeconds;
+
+        if (OverloadCooldownTimer >= OverloadCooldownDuration)
+        {
+            bOverloadOnCooldown = false;
+        }
+    }
+
+    if (bIsOverloaded)
+    {
+        if (ExperiencePoints - (DeltaSeconds * 2.5f) < 0.0f)
+        {
+            EndOverload();
+        }
+        else
+        {
+            // Decrease experience (100xp = 40secs)
+            ExperiencePoints -= DeltaSeconds * 2.5f;
+        }        
+    }
+}
 
 //////////////////////////////////////////////////////////////////////////
 // Input
@@ -468,6 +546,7 @@ void APrototypeCharacter::SetupPlayerInputComponent(class UInputComponent* Input
     InputComponent->BindAction("UpgradePower1", IE_Pressed, this, &APrototypeCharacter::OnUpgradePower1Pressed);
     InputComponent->BindAction("UpgradePower2", IE_Pressed, this, &APrototypeCharacter::OnUpgradePower2Pressed);
     InputComponent->BindAction("UpgradePower3", IE_Pressed, this, &APrototypeCharacter::OnUpgradePower3Pressed);
+    InputComponent->BindAction("UpgradePower4", IE_Pressed, this, &APrototypeCharacter::OnUpgradePower4Pressed);
 
     InputComponent->BindAction("ExitGame", IE_Pressed, this, &APrototypeCharacter::OnExitGamePressed);
     InputComponent->BindAction("RestartGame", IE_Pressed, this, &APrototypeCharacter::OnRestartGamePressed);
@@ -540,13 +619,13 @@ void APrototypeCharacter::OnJumpPressed()
         else if (GetCharacterMovement()->Velocity.Size() >= RunSpeed * 1.25f)
         {
             // Verify if enough stamina
-            if (StaminaCurrent - StaminaDrain * 50 > 0)
+            if (StaminaCurrent - StaminaDrain * DashJumpStaminaConsumption > 0)
             {  
                 // Execute jump action
                 bPressedJump = true;
 
                 // Drain stamina from dash jumping
-                StaminaCurrent = (StaminaCurrent - StaminaDrain * 50 < 0) ? 0 : StaminaCurrent - StaminaDrain * 50;
+                StaminaCurrent = (StaminaCurrent - StaminaDrain * DashJumpStaminaConsumption < 0) ? 0 : StaminaCurrent - StaminaDrain * DashJumpStaminaConsumption;
             }
             else
             {
@@ -610,7 +689,7 @@ void APrototypeCharacter::OnDashPressed()
         if (GetCharacterMovement()->IsFalling())
         {
             // Verify if enough stamina
-            if (StaminaCurrent - StaminaDrain * 50 < 0)
+            if (StaminaCurrent - StaminaDrain * DashJumpStaminaConsumption < 0)
             {
                 MissingStamina();
 
@@ -620,7 +699,7 @@ void APrototypeCharacter::OnDashPressed()
             else
             {
                 // Drain stamina from dash jumping
-                StaminaCurrent = (StaminaCurrent - StaminaDrain * 50 < 0) ? 0 : StaminaCurrent - StaminaDrain * 50;
+                StaminaCurrent = (StaminaCurrent - StaminaDrain * DashJumpStaminaConsumption < 0) ? 0 : StaminaCurrent - StaminaDrain * DashJumpStaminaConsumption;
             }            
         }
 
@@ -646,7 +725,7 @@ void APrototypeCharacter::OnDivePressed()
     if (bIsDead){return;}
 
     // Verify if enough stamina
-    if (StaminaCurrent - StaminaDrain * 25 < 0)
+    if (StaminaCurrent - StaminaDrain * DiveStaminaConsumption < 0)
     {
         MissingStamina();
 
@@ -656,7 +735,7 @@ void APrototypeCharacter::OnDivePressed()
     else
     {
         // Drain stamina from dash jumping
-        StaminaCurrent = (StaminaCurrent - StaminaDrain * 25 < 0) ? 0 : StaminaCurrent - StaminaDrain * 25;
+        StaminaCurrent = (StaminaCurrent - StaminaDrain * DiveStaminaConsumption < 0) ? 0 : StaminaCurrent - StaminaDrain * DiveStaminaConsumption;
     }
 
     // Higher the fall speed
@@ -685,7 +764,7 @@ void APrototypeCharacter::OnCrouchPressed()
 void APrototypeCharacter::VerifySlide()
 {
     // Verify if enough stamina
-    if (StaminaCurrent - StaminaDrain * 25 < 0)
+    if (StaminaCurrent - StaminaDrain * SlideStaminaConsumption < 0)
     {
         MissingStamina();
 
@@ -695,7 +774,7 @@ void APrototypeCharacter::VerifySlide()
     else
     {
         // Drain stamina from slide
-        StaminaCurrent = (StaminaCurrent - StaminaDrain * 25 < 0) ? 0 : StaminaCurrent - StaminaDrain * 25;
+        StaminaCurrent = (StaminaCurrent - StaminaDrain * SlideStaminaConsumption < 0) ? 0 : StaminaCurrent - StaminaDrain * SlideStaminaConsumption;
     }
 
     SetSliding(true);
@@ -770,6 +849,7 @@ void APrototypeCharacter::OnUpgradePower1Pressed()
     
     // Update speed
     GetCharacterMovement()->MaxWalkSpeed = (bIsRunning) ? RunSpeed : RunSpeed / 2;
+    GetCharacterMovement()->MaxWalkSpeedCrouched = RunSpeed / 3;
 }
 
 void APrototypeCharacter::OnUpgradePower2Pressed()
@@ -788,9 +868,20 @@ void APrototypeCharacter::OnUpgradePower3Pressed()
     StaminaDrain = StaminaPowerDefault - ((StaminaPowerLevel - 1) * StaminaPowerIncrement);
 }
 
-void APrototypeCharacter::UpgradePower(float &PowerId)
+void APrototypeCharacter::OnUpgradePower4Pressed()
 {
-    if (StatsCount > 0 && PowerId < MAX_LEVEL)
+    UpgradePower(AbsorbPowerLevel, false);
+
+    // Set new absorb time and distance values
+    AbsorbPowerTime = AbsorbPowerTimeDefault - ((AbsorbPowerLevel - 1) * AbsorbPowerTimeIncrement);
+    AbsorbPowerDistance = AbsorbPowerDistanceDefault + ((AbsorbPowerLevel - 1) * AbsorbPowerDistanceIncrement);
+}
+
+void APrototypeCharacter::UpgradePower(float &PowerId, bool bIsNormal)
+{
+    int MaximumLevelForPower = (bIsNormal) ? MAX_LEVEL : MAX_LEVEL / 3;
+
+    if (StatsCount > 0 && PowerId < MaximumLevelForPower)
     {
         // Level up stat
         PowerId++;
@@ -799,10 +890,12 @@ void APrototypeCharacter::UpgradePower(float &PowerId)
         StatsCount--;
 
         // Reset xp if needed
-        if (ExperiencePoints == 100.0f)
-        {            
-            ExperiencePoints = 0.0f;
-        }
+        //if (ExperiencePoints == 100.0f)
+        //{            
+        //    ExperiencePoints = 0.0f;
+        //}
+
+        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("This is an on screen message!"));
 
         // Play upgrade sound
         UGameplayStatics::PlaySoundAtLocation(this, PowerUpgradeSound, GetActorLocation());
@@ -810,7 +903,7 @@ void APrototypeCharacter::UpgradePower(float &PowerId)
     else if (bIsHackingPowerups)
     {
         // Level up stat or set it to 1 if over maximum x2
-        PowerId = (PowerId < MAX_LEVEL * 2) ? PowerId + 1 : PowerId = 1;
+        PowerId = (PowerId < MaximumLevelForPower * 2) ? PowerId + 1 : PowerId = 1;
     }
 }
 
@@ -851,6 +944,117 @@ void APrototypeCharacter::MissingStamina()
     UGameplayStatics::PlaySoundAtLocation(this, MissingStaminaSound, GetActorLocation());
 }
 
+void APrototypeCharacter::Overload()
+{
+    // If can overload
+    if (ExperiencePoints >= 10.0f && !bOverloadOnCooldown && !bIsOverloaded)
+    {
+        bOverloadStarted = true;
+
+        // Activate overload with a 4 second delay
+        FTimerHandle UniqueHandle;
+        FTimerDelegate OverloadDelegate = FTimerDelegate::CreateUObject(this, &APrototypeCharacter::StartOverload);
+        GetWorldTimerManager().SetTimer(UniqueHandle, OverloadDelegate, 4.f, false);
+    }    
+    else if (ExperiencePoints < 10.0f)
+    {
+        APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
+        APrototypeHUD* MyGameHUD = Cast<APrototypeHUD>(PlayerController->GetHUD());
+        MyGameHUD->bShowOverloadMissingXP = true;
+    }
+}
+
+void APrototypeCharacter::StartOverload()
+{
+    bIsOverloaded = true;
+    bOverloadStarted = false;
+    bOverloadOnCooldown = true;
+
+    // Upgrade +2/+0
+    SpeedPowerLevel += 2;
+    JumpPowerLevel += 2;
+    StaminaPowerLevel += 2;
+    AbsorbPowerLevel += 0;
+
+    // Update +1/+1
+    OnUpgradePower1Pressed();
+    OnUpgradePower2Pressed();
+    OnUpgradePower3Pressed();
+    OnUpgradePower4Pressed();
+
+    // Respawn faster
+    RespawnTime = RespawnOverloadTime;
+
+    // Make current energypickup slower
+    TArray<AActor*> FoundEnergyPickupActors;
+
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnergyPickup::StaticClass(), FoundEnergyPickupActors);
+
+    for (auto Actor : FoundEnergyPickupActors)
+    {
+        AEnergyPickup* EnergyActor = Cast<AEnergyPickup>(Actor);
+        // Slow its speed
+        EnergyActor->SpeedLevel /= 10;
+    }
+
+    // Make spawn volume spawn slower
+    TArray<AActor*> FoundSpawnVolumeActors;
+
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ASpawnVolume::StaticClass(), FoundSpawnVolumeActors);
+
+    // Get the present spawn volume
+    for (auto Actor : FoundSpawnVolumeActors)
+    {
+        ASpawnVolume* SpawnVolumeActor = Cast<ASpawnVolume>(Actor);
+        SpawnVolumeActor->SpawnedSpeedLevel /= 10;
+    }
+}
+
+void APrototypeCharacter::EndOverload()
+{
+    bIsOverloaded = false;
+    bOverloadEnded = true;
+
+    // Deupgrade -4/-2
+    SpeedPowerLevel -= 4;
+    JumpPowerLevel -= 4;
+    StaminaPowerLevel -= 4;
+    AbsorbPowerLevel -= 2;
+
+    // Update and +1/+1
+    OnUpgradePower1Pressed();
+    OnUpgradePower2Pressed();
+    OnUpgradePower3Pressed();
+    OnUpgradePower4Pressed();
+
+    // Respawn faster
+    RespawnTime = RespawnNormalTime;
+
+    // Make current energypickup normal
+    TArray<AActor*> FoundEnergyPickupActors;
+
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnergyPickup::StaticClass(), FoundEnergyPickupActors);
+
+    for (auto Actor : FoundEnergyPickupActors)
+    {
+        AEnergyPickup* EnergyActor = Cast<AEnergyPickup>(Actor);
+        // Slow its speed
+        EnergyActor->SpeedLevel *= 10;
+    }
+
+    // Make spawn volume spawn slower
+    TArray<AActor*> FoundSpawnVolumeActors;
+
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ASpawnVolume::StaticClass(), FoundSpawnVolumeActors);
+
+    // Get the present spawn volume
+    for (auto Actor : FoundSpawnVolumeActors)
+    {
+        ASpawnVolume* SpawnVolumeActor = Cast<ASpawnVolume>(Actor);
+        SpawnVolumeActor->SpawnedSpeedLevel *= 10;
+    }
+}
+
 void APrototypeCharacter::System0731()
 {
     bIsHackingPowerups = !bIsHackingPowerups;
@@ -859,12 +1063,18 @@ void APrototypeCharacter::System0731()
     SpeedPowerLevel = MAX_LEVEL * 2 - 1;
     JumpPowerLevel = MAX_LEVEL * 2 - 1;
     StaminaPowerLevel = MAX_LEVEL * 2 - 1;
+    AbsorbPowerLevel = (MAX_LEVEL / 3.0f) * 2 - 1;
 
     OnUpgradePower1Pressed();
     OnUpgradePower2Pressed();
     OnUpgradePower3Pressed();
+    OnUpgradePower4Pressed();
 }
 
+void APrototypeCharacter::System0732()
+{
+    ExperiencePoints += 99.0f;
+}
 
 //////////////////////////////////////////////////////////////////////////
 // Base Movement Override
@@ -1037,16 +1247,24 @@ void APrototypeCharacter::UpdateSlideSounds(bool bNewIsSliding)
 
 //////////////////////////////////////////////////////////////////////////
 // Powerups
-void APrototypeCharacter::LevelUp()
+void APrototypeCharacter::LevelUp(bool bLeveledUpWithXP)
 {
     // Increment stat
     StatsCount++;
 
     // Full stamina
     StaminaCurrent = StaminaMax;
-
-    // Play level up sound
-    UGameplayStatics::PlaySoundAtLocation(this, LevelUpSound, GetActorLocation());
+    
+    if (bLeveledUpWithXP)
+    {
+        // Play level up sound
+        UGameplayStatics::PlaySoundAtLocation(this, LevelUpXPSound, GetActorLocation());
+    }
+    else
+    {
+        // Play level up sound
+        UGameplayStatics::PlaySoundAtLocation(this, LevelUpPickupSound, GetActorLocation());
+    }    
 }
 
 
@@ -1072,7 +1290,7 @@ void APrototypeCharacter::Die()
     // Finish the respawn with a 2 second delay
     FTimerHandle UniqueHandle;
     FTimerDelegate RespawnDelegate = FTimerDelegate::CreateUObject(this, &APrototypeCharacter::Respawn);
-    GetWorldTimerManager().SetTimer(UniqueHandle, RespawnDelegate, 2.f, false);
+    GetWorldTimerManager().SetTimer(UniqueHandle, RespawnDelegate, RespawnTime, false);
 }
 
 void APrototypeCharacter::Respawn()

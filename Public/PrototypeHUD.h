@@ -56,5 +56,15 @@ public:
     /** */
     float XPGainTimer;
 
+    /** */
+    float LevelUpTimer;
+
+    /** */
+    bool bShowOverloadMissingXP;
+
+    /** */
+    float OverloadMissingXPTimer;
+
+
 };
 

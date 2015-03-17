@@ -3,6 +3,7 @@
 #include "GameFramework/GameMode.h"
 #include "SpawnVolume.h"
 #include "DeathFloor.h"
+#include "MusicPlayer.h"
 #include "PrototypeGameMode.generated.h"
 
 enum class EPrototypePlayState : short
@@ -30,10 +31,25 @@ public:
     virtual void Tick(float DeltaSeconds) override;
 
     /** */
+    void UpdateOverload();
+
+    /** */
     ASpawnVolume* SpawnVolumeActor;
     
     /** */
     bool bIsSpawnVolumeSet;
+
+    /** */
+    void SetSpawnVolumeActor();
+
+    /** */
+    AMusicPlayer* MusicPlayerActor;
+
+    /** */
+    bool bIsMusicPlayerSet;
+
+    /** */
+    void SetMusicPlayerActor();
 
     /** Number of energy to end the game */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = GameMode)
@@ -67,18 +83,6 @@ public:
     /** Time elapsed during the game */
     float GameTime;
 
-    /** Time elapsed during the tutorial */
-    float TutorialCurrentTimeAttack;
-
-    /** Best time for tutorial time attack */
-    float TutorialBestTimeAttack;
-
-    /** Show the time attack result for secs */
-    float TutorialTimeAttackTimer;
-
-    /** Should show tutorial time attack */
-    bool bShowTutorialTimeAttack;
-
     /** Show the planet life loss warning for secs */
     float ExplosionWarningTimer;
 
@@ -87,6 +91,11 @@ public:
 
     /** Spawn an energy with a delay */
     void SpawnEnergyWithDelay();
+
+    /** */
+    bool bOverloadMusicStarted;
+
+    
     
 private:
          

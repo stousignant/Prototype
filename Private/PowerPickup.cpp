@@ -48,7 +48,7 @@ void APowerPickup::ReceiveHit(
         this->OnPickedUp();
 
         // Level up the character
-        TestCharacter->LevelUp();        
+        TestCharacter->LevelUp(false);        
     }
 }
 

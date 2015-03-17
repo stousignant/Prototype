@@ -105,7 +105,7 @@ FVector ASpawnVolume::GetRandomPointInVolume()
         // If early game, spawn close
         APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
 
-        float SpawnDistanceDifficulty = (MyGameMode->GetCurrentState() == EPrototypePlayState::EEarlyGame) ? 1.0f : 2.0f;
+        float SpawnDistanceDifficulty = (MyGameMode->GetCurrentState() == EPrototypePlayState::EEarlyGame) ? 1.0f : 1.5f;
         
         do
         {
