@@ -7,6 +7,11 @@
 #include "Kismet/GameplayStatics.h"
 #include "Engine.h"
 
+const int NORMAL_MODE = 5;
+const int HARD_MODE = 20;
+const int VERYHARD_MODE = 50;
+const int ULTIMATE_MODE = 100;
+
 APrototypeGameMode::APrototypeGameMode(const FObjectInitializer& ObjectInitializer)	: Super(ObjectInitializer)
 {
 	// Set default pawn class to our Blueprinted character
@@ -17,7 +22,7 @@ APrototypeGameMode::APrototypeGameMode(const FObjectInitializer& ObjectInitializ
 	HUDClass = APrototypeHUD::StaticClass();
 
     // Set the default values 
-    EnergyMax = 5.0f;
+    EnergyMax = NORMAL_MODE;
     EnergyCount = 0.0f;
     ExplosionMax = 3.0f;
     ExplosionCount = 0.0f;  
@@ -43,7 +48,10 @@ void APrototypeGameMode::Tick(float DeltaSeconds)
     UpdateOverload();
     
     // Accumulate time for game time
-    if (GetCurrentState() == EPrototypePlayState::EEarlyGame || GetCurrentState() == EPrototypePlayState::ELateGame)
+    if (GetCurrentState() == EPrototypePlayState::ENormalMode || 
+        GetCurrentState() == EPrototypePlayState::EHardMode || 
+        GetCurrentState() == EPrototypePlayState::EVeryHardMode || 
+        GetCurrentState() == EPrototypePlayState::EUltimateMode)
     {
         GameTime += DeltaSeconds;
     }
@@ -133,8 +141,12 @@ void APrototypeGameMode::IncrementEnergy(int value)
 {
     EnergyCount += value;
 
+    // Increase difficulty
+    SpawnVolumeActor->SpawnedSpeedLevel = SpawnVolumeActor->SpawnedSpeedLevel + (SpawnVolumeActor->SpawnSpeedIncrement * value);
+    SpawnVolumeActor->SpawnDistance = SpawnVolumeActor->SpawnDistance + (SpawnVolumeActor->SpawnDistanceIncrement * value);
+
     // Check if game won
-    if (GetCurrentState() == EPrototypePlayState::EEarlyGame && EnergyCount >= EnergyMax)
+    if (EnergyCount >= EnergyMax)
     {
         SetCurrentState(EPrototypePlayState::EGameWon);
     }
@@ -145,9 +157,19 @@ float APrototypeGameMode::GetExplosionCount()
     return ExplosionCount;
 }
 
+// HACK
+void APrototypeGameMode::SetExplosionCount(float value)
+{
+    ExplosionCount = value;
+}
+
 void APrototypeGameMode::IncrementExplosion(int value)
 {
     ExplosionCount += value;
+
+    // Increase difficulty
+    SpawnVolumeActor->SpawnedSpeedLevel = SpawnVolumeActor->SpawnedSpeedLevel + (SpawnVolumeActor->SpawnSpeedIncrement * value);
+    SpawnVolumeActor->SpawnDistance = SpawnVolumeActor->SpawnDistance + (SpawnVolumeActor->SpawnDistanceIncrement * value);
     
     // Check if game over
     if (ExplosionCount >= ExplosionMax)
@@ -172,6 +194,22 @@ void APrototypeGameMode::SetCurrentState(EPrototypePlayState NewState)
     }
 }
 
+void APrototypeGameMode::SetNextState()
+{
+    if (EnergyMax == NORMAL_MODE)
+    {
+        SetCurrentState(EPrototypePlayState::EHardMode);
+    }
+    else if (EnergyMax == HARD_MODE)
+    {
+        SetCurrentState(EPrototypePlayState::EVeryHardMode);
+    }
+    else if (EnergyMax == VERYHARD_MODE)
+    {
+        SetCurrentState(EPrototypePlayState::EUltimateMode);
+    }
+}
+
 void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
 {
     switch (NewState)
@@ -183,13 +221,79 @@ void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
     }
     break;
     // When we're playing, the spawn volumes can spawn
-    case EPrototypePlayState::EEarlyGame:
+    case EPrototypePlayState::ENormalMode:
     {
         // First pick up spawn
         SpawnEnergy();
 
         // Play early game music
-        MusicPlayerActor->PlayEarlyGameMusic();
+        MusicPlayerActor->PlayNormalModeMusic();
+
+        // Current mode string
+        CurrentModeString = FString(TEXT("NORMAL MODE"));
+        NextModeString = FString(TEXT("HARD MODE"));
+
+        // Energy max
+        EnergyMax = NORMAL_MODE;
+    }
+    break;
+    //
+    case EPrototypePlayState::EHardMode:
+    {
+        // Get the character and unblock mouvement
+        APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+        MyCharacter->bMovementBlocked = false;
+
+        // Play late game music
+        MusicPlayerActor->PlayHardModeMusic();
+
+        // Current mode string
+        CurrentModeString = FString(TEXT("HARD MODE"));
+        NextModeString = FString(TEXT("VERY HARD MODE"));
+
+        // Energy max
+        EnergyMax = HARD_MODE;
+    }
+    break;
+    //
+    case EPrototypePlayState::EVeryHardMode:
+    {
+        // Get the character and unblock mouvement
+        APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+        MyCharacter->bMovementBlocked = false;
+
+        // Play late game music
+        MusicPlayerActor->PlayVeryHardModeMusic();
+
+        // Current mode string
+        CurrentModeString = FString(TEXT("VERY HARD MODE"));
+        NextModeString = FString(TEXT("ULTIMATE MODE"));
+
+        // Energy max
+        EnergyMax = VERYHARD_MODE;
+
+        // Increase difficulty
+        SpawnVolumeActor->SpawnSpeedIncrement = 1.0f;
+    }
+    break;
+    //
+    case EPrototypePlayState::EUltimateMode:
+    {
+        // Get the character and unblock mouvement
+        APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+        MyCharacter->bMovementBlocked = false;
+
+        // Play late game music
+        MusicPlayerActor->PlayUltimateModeMusic();
+
+        // Current mode string
+        CurrentModeString = FString(TEXT("ULTIMATE MODE"));
+
+        // Energy max
+        EnergyMax = ULTIMATE_MODE;
+
+        // Increase difficulty
+        SpawnVolumeActor->bIsUltimateMode = true;
     }
     break;
     //
@@ -197,6 +301,13 @@ void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
     {
         APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
         PlayerController->SetCinematicMode(true, true, false);
+
+        // Get the character and end overload if needed
+        APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+        if (MyCharacter->bIsOverloaded)
+        {
+            MyCharacter->EndOverload();
+        }        
 
         // Play game over music
         MusicPlayerActor->PlayGameOverMusic();
@@ -209,21 +320,16 @@ void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
         APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
         MyCharacter->bMovementBlocked = true;
 
+        // End overload if needed
+        if (MyCharacter->bIsOverloaded)
+        {
+            MyCharacter->EndOverload();
+        }
+
         // Play game won music
         MusicPlayerActor->PlayGameWonMusic();
     }
-    break;
-    //
-    case EPrototypePlayState::ELateGame:
-    {
-        // Get the character and unblock mouvement
-        APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
-        MyCharacter->bMovementBlocked = false;
-
-        // Play late game music
-        MusicPlayerActor->PlayLateGameMusic();
-    }
-    break;
+    break;    
     // 
     case EPrototypePlayState::EUnknown:
     {
@@ -250,7 +356,7 @@ void APrototypeGameMode::SpawnEnergyWithDelay()
     // Spawn pickup after a 3 second delay
     FTimerHandle UniqueHandle;
     FTimerDelegate TimerDelegate = FTimerDelegate::CreateUObject(this, &APrototypeGameMode::SpawnEnergy);
-    GetWorldTimerManager().SetTimer(UniqueHandle, TimerDelegate, 3.f, false);    
+    GetWorldTimerManager().SetTimer(UniqueHandle, TimerDelegate, 1.f, false);    
 }
 
 void APrototypeGameMode::SpawnEnergy()

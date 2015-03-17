@@ -40,14 +40,17 @@ public:
 
     /** Speed increment */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
-    float SpeedIncrement;
+    float SpawnSpeedIncrement;
 
     /** Spawn distance increment */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
     float SpawnDistanceIncrement;
 
-    /** Counter to keep track of the number of object spawned */
-    float SpawnCounter;
+    /** */
+    bool bIsUltimateMode;
+
+    /** */
+    bool bIsCharacterOverloaded;
 
     /** Last random location generated */
     FVector LastRandomLocation;

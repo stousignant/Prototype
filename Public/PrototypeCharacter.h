@@ -156,14 +156,11 @@ public:
     /** If character is in overload state */
     bool bIsOverloaded;
 
-    /** */
+    /** Cooldown timer for the overload state */
     float OverloadCooldownTimer;
 
-    /** */
+    /** Value for the cooldown duration */
     float OverloadCooldownDuration;
-
-    /** If character has activated overload */
-    bool bOverloadOnCooldown;
 
     /** */
     void StartOverload();
@@ -273,14 +270,26 @@ public:
     /** Player pressed upgrade power 1 action */
     void OnUpgradePower1Pressed();
 
+    /** */
+    void UpdateSpeedPower();
+
     /** Player pressed upgrade power 2 action */
     void OnUpgradePower2Pressed();
+
+    /** */
+    void UpdateJumpPower();
 
     /** Player pressed upgrade power 3 action */
     void OnUpgradePower3Pressed();
 
+    /** */
+    void UpdateStaminaPower();
+
     /** Player pressed upgrade power 4 action */
     void OnUpgradePower4Pressed();
+
+    /** */
+    void UpdateAbsorbPower();
 
     /** Player pressed the exit game key */
     void OnExitGamePressed();
@@ -320,9 +329,17 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
     class USoundBase* JumpSound;
 
+    /** Sound to play when we jump in overload */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
+    class USoundBase* OverloadJumpSound;
+
     /** Sound to play when we land */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
     class USoundBase* LandSound;
+
+    /** Sound to play when we land in overload */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
+    class USoundBase* OverloadLandSound;
 
     /** Sound to play when we travel at huge speed */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
@@ -558,6 +575,9 @@ public:
     /** Show that character is lacking stamina for action */
     void MissingStamina();
 
+    /** */
+    float DiveSpeed;
+
     /** Overload command */
     UFUNCTION(Exec)
     void Overload();
@@ -572,8 +592,35 @@ public:
     /** If game is paused */
     bool bIsGamePaused;
 
+    /** Is cheat for experience on */
+    bool bIsHackingExperience;
+
+    /** Hack experience command */
     UFUNCTION(Exec)
     void System0732();
+
+    /** Is cheat for planet lifes on */
+    bool bIsHackingLife;
+
+    /** Hack life command */
+    UFUNCTION(Exec)
+    void System0733();
+
+    /** Hack normal mode command */
+    UFUNCTION(Exec)
+    void System0734();
+
+    /** Hack hard mode command */
+    UFUNCTION(Exec)
+    void System0735();
+
+    /** Hack very hard mode command */
+    UFUNCTION(Exec)
+    void System0736();
+
+    /** Hack ultimate mode command */
+    UFUNCTION(Exec)
+    void System0737();
         
 
 protected:

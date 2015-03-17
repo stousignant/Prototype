@@ -7,7 +7,8 @@
 
 // Difficulty caps
 const float SPAWN_DISTANCE_MAX = 25000.0f;
-const float SPAWN_SPEED_MAX = 40.0f;
+const float SPAWN_SPEED_MAX = 50.0f; // 40.0f = 14 sec ou 80.0f = 14 sec en overload
+// 50.0f = 11.2 sec ou 100.0f = 11.2 sec en overload
 
 ASpawnVolume::ASpawnVolume(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -21,7 +22,7 @@ ASpawnVolume::ASpawnVolume(const FObjectInitializer& ObjectInitializer) : Super(
     SpawnedSpeedLevel = 5.0f;
 
     // Set the default speed increment
-    SpeedIncrement = 0.5f;
+    SpawnSpeedIncrement = 0.5f;
     
     // Set the default spawn distance values
     SpawnDistance = 14000.0f;
@@ -29,6 +30,8 @@ ASpawnVolume::ASpawnVolume(const FObjectInitializer& ObjectInitializer) : Super(
 
     // Set the default
     bIsFirstSpawn = true;
+    bIsUltimateMode = false;
+    bIsCharacterOverloaded = false;
 
     // Make the SpawnVolume tickable
     PrimaryActorTick.bCanEverTick = false;
@@ -63,17 +66,32 @@ void ASpawnVolume::SpawnPickup()
             AEnergyPickup* const SpawnedEnergy = Cast<AEnergyPickup>(SpawnedPickup);
             if (SpawnedEnergy)
             {
+                // Check if speed is not over threshold
+                if (SpawnedSpeedLevel >= SPAWN_SPEED_MAX)
+                {
+                    SpawnedSpeedLevel = SPAWN_SPEED_MAX;
+                }
+
+                // Double speed if in ultimate mode
+                if (bIsUltimateMode)
+                {
+                    SpawnedSpeedLevel *= 2.0f;
+                }
+
+                if (bIsCharacterOverloaded)
+                {
+                    SpawnedSpeedLevel /= 2.0f;
+                }
+
+                // Attribute new speed
                 SpawnedEnergy->SpeedLevel = SpawnedSpeedLevel;
-            }
 
-            // Increase difficulty but not over threshold
-            SpawnedSpeedLevel = SpawnedSpeedLevel >= SPAWN_SPEED_MAX ? SPAWN_SPEED_MAX : SpawnedSpeedLevel + SpeedIncrement;
-
-            // Increment the spawn distance per spawn but not over threshold
-            SpawnDistance = SpawnDistance >= SPAWN_DISTANCE_MAX ? SPAWN_DISTANCE_MAX : SpawnDistance + SpawnDistanceIncrement;
-
-            // Increment the spawn counter
-            SpawnCounter++;
+                // Check if distance is not over threshold
+                if (SpawnDistance >= SPAWN_DISTANCE_MAX)
+                {
+                    SpawnDistance = SPAWN_DISTANCE_MAX;
+                }
+            }                        
         }
     }
 }
@@ -105,7 +123,7 @@ FVector ASpawnVolume::GetRandomPointInVolume()
         // If early game, spawn close
         APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
 
-        float SpawnDistanceDifficulty = (MyGameMode->GetCurrentState() == EPrototypePlayState::EEarlyGame) ? 1.0f : 1.5f;
+        float SpawnDistanceDifficulty = (MyGameMode->GetCurrentState() == EPrototypePlayState::ENormalMode) ? 1.0f : 1.5f;
         
         do
         {

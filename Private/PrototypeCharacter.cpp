@@ -77,9 +77,8 @@ APrototypeCharacter::APrototypeCharacter(const FObjectInitializer& ObjectInitial
     // Overload
     bOverloadStarted = false;
     bOverloadEnded = false;
-    bOverloadOnCooldown = false;
     bIsOverloaded = false;
-    OverloadCooldownDuration = 120.0f; // 2 mins
+    OverloadCooldownDuration = 60.0f; // 1 min
     OverloadCooldownTimer = 0.0f;
 
     // Set movement variables
@@ -119,6 +118,9 @@ APrototypeCharacter::APrototypeCharacter(const FObjectInitializer& ObjectInitial
     RespawnNormalTime = 2.0f;
     RespawnOverloadTime = 0.5f;
     RespawnTime = RespawnNormalTime;
+
+    // For Land volume multiplier
+    DiveSpeed = 0.0f;
 
     // Pause variable
     bIsGamePaused = false;
@@ -307,7 +309,10 @@ void APrototypeCharacter::UpdateRespawnPoint(float DeltaSeconds)
 {
     // Only update respawn point if in playing mode
     APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-    if (MyGameMode->GetCurrentState() == EPrototypePlayState::EEarlyGame || MyGameMode->GetCurrentState() == EPrototypePlayState::ELateGame)
+    if (MyGameMode->GetCurrentState() == EPrototypePlayState::ENormalMode ||
+        MyGameMode->GetCurrentState() == EPrototypePlayState::EHardMode ||
+        MyGameMode->GetCurrentState() == EPrototypePlayState::EVeryHardMode || 
+        MyGameMode->GetCurrentState() == EPrototypePlayState::EUltimateMode)
     {
         RespawnSaveTimer += DeltaSeconds;
 
@@ -410,14 +415,24 @@ void APrototypeCharacter::UpdateScan(float DeltaSeconds)
             // If leveled up
             if (ExperiencePoints >= 100.0f)
             {
-                // Level up
-                LevelUp(true);
+                // If in overload
+                if (bIsOverloaded)
+                {
+                    // Cap experience gain at 100.0f
+                    ExperiencePoints = 100.0f;
+                }
+                // If normal
+                else
+                {
+                    // Level up
+                    LevelUp(true);
 
-                // Show it
-                MyGameHUD->bShowLevelUp = true;
+                    // Show it
+                    MyGameHUD->bShowLevelUp = true;
 
-                // Decrease xp if he didn't put his stat from leveling up
-                ExperiencePoints -= 100.0f;                
+                    // Decrease xp if he didn't put his stat from leveling up
+                    ExperiencePoints -= 100.0f;
+                }                            
             }
             else
             {
@@ -495,26 +510,33 @@ void APrototypeCharacter::UpdateSound(float DeltaSeconds)
 
 void APrototypeCharacter::UpdateOverload(float DeltaSeconds)
 {
-    if (bOverloadOnCooldown)
+    if (OverloadCooldownTimer > 0.0f)
     {
-        OverloadCooldownTimer += DeltaSeconds;
+        OverloadCooldownTimer -= DeltaSeconds;
 
-        if (OverloadCooldownTimer >= OverloadCooldownDuration)
+        if (OverloadCooldownTimer < 0.0f)
         {
-            bOverloadOnCooldown = false;
+            // Cooldown is back
+            OverloadCooldownTimer = 0.0f;
         }
     }
 
     if (bIsOverloaded)
     {
-        if (ExperiencePoints - (DeltaSeconds * 2.5f) < 0.0f)
+        // Don't consume XP if hacking
+        if (bIsHackingExperience)
+        {
+            return;
+        }
+
+        if (ExperiencePoints - (DeltaSeconds * 5.0f) < 0.0f)
         {
             EndOverload();
         }
         else
         {
-            // Decrease experience (100xp = 40secs)
-            ExperiencePoints -= DeltaSeconds * 2.5f;
+            // Decrease experience (100xp = 20secs)
+            ExperiencePoints -= DeltaSeconds * 5.0f;
         }        
     }
 }
@@ -641,8 +663,17 @@ void APrototypeCharacter::OnJumpPressed()
         // If jumped
         if (bPressedJump)
         {
+            // Calculate land sound volume multiplier
+            float JumpVolumeMultiplier = 1.0f + JumpPowerLevel * 0.0667f;
+
+            if (bIsOverloaded)
+            {
+                // Play overload jump sound
+                UGameplayStatics::PlaySoundAtLocation(this, OverloadJumpSound, GetActorLocation(), JumpVolumeMultiplier);
+            }
+
             // Play jump sound
-            UGameplayStatics::PlaySoundAtLocation(this, JumpSound, GetActorLocation());
+            UGameplayStatics::PlaySoundAtLocation(this, JumpSound, GetActorLocation(), JumpVolumeMultiplier);
         }
     }    
 }
@@ -743,6 +774,9 @@ void APrototypeCharacter::OnDivePressed()
 
     // Add a force downward
     GetCharacterMovement()->Velocity += FVector(0, 0, RunSpeed * -5);
+
+    // Fall speed
+    DiveSpeed = GetCharacterMovement()->Velocity.Z * -1;
 }
 
 void APrototypeCharacter::OnCrouchPressed()
@@ -842,11 +876,16 @@ void APrototypeCharacter::OnUpgradePower1Pressed()
 {
     UpgradePower(SpeedPowerLevel);
 
+    UpdateSpeedPower();    
+}
+
+void APrototypeCharacter::UpdateSpeedPower()
+{
     // Set new speed value
     RunSpeed = SpeedPowerDefault + ((SpeedPowerLevel - 1) * SpeedPowerIncrement);
     NormalAccel = AccelerationPowerDefault + ((SpeedPowerLevel - 1) * AccelerationPowerIncrement);
     GetCharacterMovement()->MaxAcceleration = NormalAccel;
-    
+
     // Update speed
     GetCharacterMovement()->MaxWalkSpeed = (bIsRunning) ? RunSpeed : RunSpeed / 2;
     GetCharacterMovement()->MaxWalkSpeedCrouched = RunSpeed / 3;
@@ -856,6 +895,11 @@ void APrototypeCharacter::OnUpgradePower2Pressed()
 {
     UpgradePower(JumpPowerLevel);
 
+    UpdateJumpPower();
+}
+
+void APrototypeCharacter::UpdateJumpPower()
+{
     // Set new jump velocity value
     GetCharacterMovement()->JumpZVelocity = JumpPowerDefault + ((JumpPowerLevel - 1) * JumpPowerIncrement);
 }
@@ -864,6 +908,11 @@ void APrototypeCharacter::OnUpgradePower3Pressed()
 {
     UpgradePower(StaminaPowerLevel);
 
+    UpdateStaminaPower();
+}
+
+void APrototypeCharacter::UpdateStaminaPower()
+{
     // Set new stamina drain value
     StaminaDrain = StaminaPowerDefault - ((StaminaPowerLevel - 1) * StaminaPowerIncrement);
 }
@@ -872,6 +921,11 @@ void APrototypeCharacter::OnUpgradePower4Pressed()
 {
     UpgradePower(AbsorbPowerLevel, false);
 
+    UpdateAbsorbPower();
+}
+
+void APrototypeCharacter::UpdateAbsorbPower()
+{
     // Set new absorb time and distance values
     AbsorbPowerTime = AbsorbPowerTimeDefault - ((AbsorbPowerLevel - 1) * AbsorbPowerTimeIncrement);
     AbsorbPowerDistance = AbsorbPowerDistanceDefault + ((AbsorbPowerLevel - 1) * AbsorbPowerDistanceIncrement);
@@ -888,14 +942,6 @@ void APrototypeCharacter::UpgradePower(float &PowerId, bool bIsNormal)
 
         // Reduce stat available
         StatsCount--;
-
-        // Reset xp if needed
-        //if (ExperiencePoints == 100.0f)
-        //{            
-        //    ExperiencePoints = 0.0f;
-        //}
-
-        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("This is an on screen message!"));
 
         // Play upgrade sound
         UGameplayStatics::PlaySoundAtLocation(this, PowerUpgradeSound, GetActorLocation());
@@ -923,8 +969,8 @@ void APrototypeCharacter::OnContinueGamePressed()
     APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
     if (MyGameMode->GetCurrentState() == EPrototypePlayState::EGameWon)
     {
-        // Enter the late game
-        MyGameMode->SetCurrentState(EPrototypePlayState::ELateGame);
+        // Enter the next game mode
+        MyGameMode->SetNextState();
     }
 }
 
@@ -947,7 +993,7 @@ void APrototypeCharacter::MissingStamina()
 void APrototypeCharacter::Overload()
 {
     // If can overload
-    if (ExperiencePoints >= 10.0f && !bOverloadOnCooldown && !bIsOverloaded)
+    if (ExperiencePoints > 0.0f && OverloadCooldownTimer <= 0.0f && !bIsOverloaded)
     {
         bOverloadStarted = true;
 
@@ -956,11 +1002,17 @@ void APrototypeCharacter::Overload()
         FTimerDelegate OverloadDelegate = FTimerDelegate::CreateUObject(this, &APrototypeCharacter::StartOverload);
         GetWorldTimerManager().SetTimer(UniqueHandle, OverloadDelegate, 4.f, false);
     }    
-    else if (ExperiencePoints < 10.0f)
+    else if (ExperiencePoints <= 0.0f)
     {
         APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
         APrototypeHUD* MyGameHUD = Cast<APrototypeHUD>(PlayerController->GetHUD());
         MyGameHUD->bShowOverloadMissingXP = true;
+    }
+    else if (OverloadCooldownTimer > 0.0f)
+    {
+        APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
+        APrototypeHUD* MyGameHUD = Cast<APrototypeHUD>(PlayerController->GetHUD());
+        MyGameHUD->bShowOverloadMissingCD = true;
     }
 }
 
@@ -968,24 +1020,23 @@ void APrototypeCharacter::StartOverload()
 {
     bIsOverloaded = true;
     bOverloadStarted = false;
-    bOverloadOnCooldown = true;
 
-    // Upgrade +2/+0
-    SpeedPowerLevel += 2;
-    JumpPowerLevel += 2;
-    StaminaPowerLevel += 2;
-    AbsorbPowerLevel += 0;
+    // Upgrade +3/+1
+    SpeedPowerLevel += 3;
+    JumpPowerLevel += 3;
+    StaminaPowerLevel += 3;
+    AbsorbPowerLevel += 1;
 
-    // Update +1/+1
-    OnUpgradePower1Pressed();
-    OnUpgradePower2Pressed();
-    OnUpgradePower3Pressed();
-    OnUpgradePower4Pressed();
+    // Update powers
+    UpdateSpeedPower();
+    UpdateJumpPower();
+    UpdateStaminaPower();
+    UpdateAbsorbPower();
 
     // Respawn faster
     RespawnTime = RespawnOverloadTime;
 
-    // Make current energypickup slower
+    // Make current energypickup slower x2
     TArray<AActor*> FoundEnergyPickupActors;
 
     UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnergyPickup::StaticClass(), FoundEnergyPickupActors);
@@ -994,10 +1045,10 @@ void APrototypeCharacter::StartOverload()
     {
         AEnergyPickup* EnergyActor = Cast<AEnergyPickup>(Actor);
         // Slow its speed
-        EnergyActor->SpeedLevel /= 10;
+        EnergyActor->SpeedLevel /= 2.0f;
     }
 
-    // Make spawn volume spawn slower
+    // Make spawn volume spawn slower x2
     TArray<AActor*> FoundSpawnVolumeActors;
 
     UGameplayStatics::GetAllActorsOfClass(GetWorld(), ASpawnVolume::StaticClass(), FoundSpawnVolumeActors);
@@ -1006,7 +1057,7 @@ void APrototypeCharacter::StartOverload()
     for (auto Actor : FoundSpawnVolumeActors)
     {
         ASpawnVolume* SpawnVolumeActor = Cast<ASpawnVolume>(Actor);
-        SpawnVolumeActor->SpawnedSpeedLevel /= 10;
+        SpawnVolumeActor->bIsCharacterOverloaded = true;
     }
 }
 
@@ -1014,18 +1065,19 @@ void APrototypeCharacter::EndOverload()
 {
     bIsOverloaded = false;
     bOverloadEnded = true;
+    OverloadCooldownTimer = OverloadCooldownDuration;
 
-    // Deupgrade -4/-2
-    SpeedPowerLevel -= 4;
-    JumpPowerLevel -= 4;
-    StaminaPowerLevel -= 4;
-    AbsorbPowerLevel -= 2;
+    // Deupgrade -3/-1
+    SpeedPowerLevel -= 3;
+    JumpPowerLevel -= 3;
+    StaminaPowerLevel -= 3;
+    AbsorbPowerLevel -= 1;
 
-    // Update and +1/+1
-    OnUpgradePower1Pressed();
-    OnUpgradePower2Pressed();
-    OnUpgradePower3Pressed();
-    OnUpgradePower4Pressed();
+    // Update powers
+    UpdateSpeedPower();
+    UpdateJumpPower();
+    UpdateStaminaPower();
+    UpdateAbsorbPower();
 
     // Respawn faster
     RespawnTime = RespawnNormalTime;
@@ -1039,7 +1091,7 @@ void APrototypeCharacter::EndOverload()
     {
         AEnergyPickup* EnergyActor = Cast<AEnergyPickup>(Actor);
         // Slow its speed
-        EnergyActor->SpeedLevel *= 10;
+        EnergyActor->SpeedLevel *= 2;
     }
 
     // Make spawn volume spawn slower
@@ -1051,7 +1103,7 @@ void APrototypeCharacter::EndOverload()
     for (auto Actor : FoundSpawnVolumeActors)
     {
         ASpawnVolume* SpawnVolumeActor = Cast<ASpawnVolume>(Actor);
-        SpawnVolumeActor->SpawnedSpeedLevel *= 10;
+        SpawnVolumeActor->SpawnedSpeedLevel *= 2;
     }
 }
 
@@ -1074,6 +1126,42 @@ void APrototypeCharacter::System0731()
 void APrototypeCharacter::System0732()
 {
     ExperiencePoints += 99.0f;
+    bIsHackingExperience = !bIsHackingExperience;
+}
+
+void APrototypeCharacter::System0733()
+{
+    // Get game mode
+    APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+    MyGameMode->SetExplosionCount(-1000.0f);
+}
+
+void APrototypeCharacter::System0734()
+{
+    // Get game mode
+    APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+    MyGameMode->IncrementEnergy(5);    
+}
+
+void APrototypeCharacter::System0735()
+{
+    // Get game mode
+    APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+    MyGameMode->IncrementEnergy(15);
+}
+
+void APrototypeCharacter::System0736()
+{
+    // Get game mode
+    APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+    MyGameMode->IncrementEnergy(30);
+}
+
+void APrototypeCharacter::System0737()
+{
+    // Get game mode
+    APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+    MyGameMode->IncrementEnergy(50);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1096,22 +1184,37 @@ void APrototypeCharacter::OnLanded(const FHitResult& Hit)
     // Change the fall speed to normal
     GetPawnPhysicsVolume()->TerminalVelocity = FallSpeed;
 
-    // Parent call
-    Super::OnLanded(Hit);
-
     // Calculate land sound volume multiplier
     float LandVolumeMultiplier;
-    if (GetCharacterMovement()->Velocity.Z / FallSpeed * -1 > 1.0f)
+    if (DiveSpeed > 0.0f)
     {
-        LandVolumeMultiplier = 1.0f;
+        LandVolumeMultiplier = DiveSpeed / FallSpeed;
+
+        // Don't go too high
+        if (LandVolumeMultiplier > 3.0f)
+        {
+            LandVolumeMultiplier = 3.0f;
+        }
+
+        // Reset dive speed
+        DiveSpeed = 0.0f;
     }
     else
     {
-        LandVolumeMultiplier = GetCharacterMovement()->Velocity.Z / FallSpeed * -1;
+        LandVolumeMultiplier = 1.0f;
     }
+    
+    // Parent call
+    Super::OnLanded(Hit);
 
     // Play land sound
     UGameplayStatics::PlaySoundAtLocation(this, LandSound, GetActorLocation(), LandVolumeMultiplier);    
+
+    if (bIsOverloaded)
+    {
+        // Play overload land sound
+        UGameplayStatics::PlaySoundAtLocation(this, OverloadLandSound, GetActorLocation(), LandVolumeMultiplier);
+    }
 }
 
 void APrototypeCharacter::Falling()

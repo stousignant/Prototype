@@ -1,11 +1,11 @@
 #include "Prototype.h"
 #include "PrototypeCharacter.h"
 #include "MusicPlayer.h"
+#include "Engine.h"
 
 AMusicPlayer::AMusicPlayer(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
-    bInterruptedEarlyGameMusic = false;
-    bInterruptedLateGameMusic = false;
+
 }
 
 void AMusicPlayer::PlayTutorialMusic()
@@ -21,7 +21,7 @@ void AMusicPlayer::PlayTutorialMusic()
     }
 }
 
-void AMusicPlayer::PlayEarlyGameMusic()
+void AMusicPlayer::PlayNormalModeMusic()
 {
     // Stop last music
     if (TutorialMusicAC && TutorialMusicAC->IsPlaying())
@@ -33,33 +33,14 @@ void AMusicPlayer::PlayEarlyGameMusic()
     MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
 
     //
-    EarlyGameMusicAC = UGameplayStatics::PlaySoundAttached(EarlyGameMusic, MyCharacter->GetRootComponent());
-    if (EarlyGameMusicAC)
+    NormalModeMusicAC = UGameplayStatics::PlaySoundAttached(NormalModeMusic, MyCharacter->GetRootComponent());
+    if (NormalModeMusicAC)
     {
-        EarlyGameMusicAC->Play();
+        NormalModeMusicAC->Play();
     }
 }
 
-void AMusicPlayer::PlayGameWonMusic()
-{
-    // Stop last music
-    if (EarlyGameMusicAC && EarlyGameMusicAC->IsPlaying())
-    {
-        EarlyGameMusicAC->Stop();
-    }
-
-    // Get the character
-    MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
-
-    //
-    GameWonMusicAC = UGameplayStatics::PlaySoundAttached(GameWonMusic, MyCharacter->GetRootComponent());
-    if (GameWonMusicAC)
-    {
-        GameWonMusicAC->Play();
-    }
-}
-
-void AMusicPlayer::PlayLateGameMusic()
+void AMusicPlayer::PlayHardModeMusic()
 {
     // Stop last music
     if (GameWonMusicAC && GameWonMusicAC->IsPlaying())
@@ -71,24 +52,55 @@ void AMusicPlayer::PlayLateGameMusic()
     MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
 
     //
-    LateGameMusicAC = UGameplayStatics::PlaySoundAttached(LateGameMusic, MyCharacter->GetRootComponent());
-    if (LateGameMusic)
+    HardModeMusicAC = UGameplayStatics::PlaySoundAttached(HardModeMusic, MyCharacter->GetRootComponent());
+    if (HardModeMusicAC)
     {
-        LateGameMusicAC->Play();
+        HardModeMusicAC->Play();
+    }
+}
+
+void AMusicPlayer::PlayVeryHardModeMusic()
+{
+    // Stop last music
+    if (GameWonMusicAC && GameWonMusicAC->IsPlaying())
+    {
+        GameWonMusicAC->Stop();
+    }
+
+    // Get the character
+    MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+
+    //
+    VeryHardModeMusicAC = UGameplayStatics::PlaySoundAttached(VeryHardModeMusic, MyCharacter->GetRootComponent());
+    if (VeryHardModeMusicAC)
+    {
+        VeryHardModeMusicAC->Play();
+    }
+}
+
+void AMusicPlayer::PlayUltimateModeMusic()
+{
+    // Stop last music
+    if (GameWonMusicAC && GameWonMusicAC->IsPlaying())
+    {
+        GameWonMusicAC->Stop();
+    }
+
+    // Get the character
+    MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+
+    //
+    UltimateModeMusicAC = UGameplayStatics::PlaySoundAttached(UltimateModeMusic, MyCharacter->GetRootComponent());
+    UltimateModeMusicAC->bAutoDestroy = false;
+    if (UltimateModeMusicAC)
+    {
+        UltimateModeMusicAC->Play();
     }
 }
 
 void AMusicPlayer::PlayGameOverMusic()
 {
-    // Stop last music
-    if (EarlyGameMusicAC && EarlyGameMusicAC->IsPlaying())
-    {
-        EarlyGameMusicAC->Stop();
-    }
-    else if (LateGameMusicAC && LateGameMusicAC->IsPlaying())
-    {
-        LateGameMusicAC->Stop();
-    }
+    StopCurrentMusic();
 
     // Get the character
     MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
@@ -101,18 +113,43 @@ void AMusicPlayer::PlayGameOverMusic()
     }    
 }
 
+void AMusicPlayer::PlayGameWonMusic()
+{
+    StopCurrentMusic();
+
+    // Get the character
+    MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+
+    //
+    GameWonMusicAC = UGameplayStatics::PlaySoundAttached(GameWonMusic, MyCharacter->GetRootComponent());
+    if (GameWonMusicAC)
+    {
+        GameWonMusicAC->Play();
+    }
+}
+
 void AMusicPlayer::PlayOverloadMusic()
 {
     // Interrupt current music
-    if (EarlyGameMusicAC && EarlyGameMusicAC->IsPlaying())
+    if (NormalModeMusicAC && NormalModeMusicAC->IsPlaying())
     {
-        EarlyGameMusicAC->Stop();
-        bInterruptedEarlyGameMusic = true;
+        // Fade out
+        NormalModeMusicAC->AdjustVolume(2.0f, 0.0f);
     }
-    else if (LateGameMusicAC && LateGameMusicAC->IsPlaying())
+    else if (HardModeMusicAC && HardModeMusicAC->IsPlaying())
     {
-        LateGameMusicAC->Stop();
-        bInterruptedLateGameMusic = true;
+        // Fade out
+        HardModeMusicAC->AdjustVolume(2.0f, 0.0f);
+    }
+    else if (VeryHardModeMusicAC && VeryHardModeMusicAC->IsPlaying())
+    {
+        // Fade out
+        VeryHardModeMusicAC->AdjustVolume(2.0f, 0.0f);
+    }
+    else if (UltimateModeMusicAC && UltimateModeMusicAC->IsPlaying())
+    {
+        // Fade out
+        UltimateModeMusicAC->AdjustVolume(2.0f, 0.0f);
     }
 
     // Get the character
@@ -133,46 +170,50 @@ void AMusicPlayer::StopOverloadMusic()
     {
         OverloadMusicAC->Stop();
     }
-
-    // Restart interrupted music
-    if (bInterruptedEarlyGameMusic && EarlyGameMusicAC)
+    
+    // Playback current music
+    if (NormalModeMusicAC && NormalModeMusicAC->IsPlaying())
     {
-        EarlyGameMusicAC->Play();
+        // Fade in
+        NormalModeMusicAC->AdjustVolume(2.0f, 1.0f);
     }
-    else if (bInterruptedLateGameMusic && LateGameMusicAC)
+    else if (HardModeMusicAC && HardModeMusicAC->IsPlaying())
     {
-        LateGameMusicAC->Play();
+        // Fade in
+        HardModeMusicAC->AdjustVolume(2.0f, 1.0f);
+    }
+    else if (VeryHardModeMusicAC && VeryHardModeMusicAC->IsPlaying())
+    {
+        // Fade in
+        VeryHardModeMusicAC->AdjustVolume(2.0f, 1.0f);
+    }
+    else if (UltimateModeMusicAC && UltimateModeMusicAC->IsPlaying())
+    {
+        // Fade in
+        UltimateModeMusicAC->AdjustVolume(2.0f, 1.0f);
     }
 }
 
-/*void AMusicPlayer::StopAllMusic()
+void AMusicPlayer::StopCurrentMusic()
 {
-    // Stop the current song
-    if (TutorialMusicAC && TutorialMusicAC->IsPlaying())
+    // Stop current music
+    if (NormalModeMusicAC && NormalModeMusicAC->IsPlaying())
     {
-        TutorialMusicAC->Stop();
+        NormalModeMusicAC->Stop();
     }
-    else if (EarlyGameMusicAC && EarlyGameMusicAC->IsPlaying())
+    else if (HardModeMusicAC && HardModeMusicAC->IsPlaying())
     {
-        EarlyGameMusicAC->Stop();
+        HardModeMusicAC->Stop();
     }
-    else if (GameWonMusicAC && GameWonMusicAC->IsPlaying())
+    else if (VeryHardModeMusicAC && VeryHardModeMusicAC->IsPlaying())
     {
-        GameWonMusicAC->Stop();
+        VeryHardModeMusicAC->Stop();
     }
-    else if (LateGameMusicAC && LateGameMusicAC->IsPlaying())
+    else if (UltimateModeMusicAC && UltimateModeMusicAC->IsPlaying())
     {
-        LateGameMusicAC->Stop();
+        UltimateModeMusicAC->Stop();
     }
-    else if (GameOverMusicAC && GameOverMusicAC->IsPlaying())
-    {
-        GameOverMusicAC->Stop();
-    }
-    else if (OverloadMusicAC && OverloadMusicAC->IsPlaying())
-    {
-        OverloadMusicAC->Stop();
-    }
-}*/
+}
 
 /*void AMusicPlayer::PlayMusic(short NewState)
 {

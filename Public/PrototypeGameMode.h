@@ -10,10 +10,12 @@ enum class EPrototypePlayState : short
 {
     EUnknown,
     ETutorial,
-    EEarlyGame,
+    ENormalMode,
+    EHardMode,
+    EVeryHardMode,
+    EUltimateMode,
     EGameOver,
-    EGameWon,
-    ELateGame
+    EGameWon
 };
 
 UCLASS(minimalapi)
@@ -51,6 +53,12 @@ public:
     /** */
     void SetMusicPlayerActor();
 
+    /** */
+    FString CurrentModeString;
+
+    /** */
+    FString NextModeString;
+
     /** Number of energy to end the game */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = GameMode)
     float EnergyMax;
@@ -65,6 +73,9 @@ public:
     /** Set a new game mode state */
     void SetCurrentState(EPrototypePlayState NewState);
 
+    /** Set the next game mode state */
+    void SetNextState();
+
     /** Get the energy count */
     float GetEnergyCount();
 
@@ -73,6 +84,9 @@ public:
 
     /** Get the explosion count */
     float GetExplosionCount();
+
+    /** Set the explosion count */
+    void SetExplosionCount(float value);
 
     /** Increment the explosion count (default + 1) */
     void IncrementExplosion(int value = 1);
@@ -94,6 +108,8 @@ public:
 
     /** */
     bool bOverloadMusicStarted;
+
+
 
     
     

@@ -63,7 +63,10 @@ public:
     bool bShowOverloadMissingXP;
 
     /** */
-    float OverloadMissingXPTimer;
+    bool bShowOverloadMissingCD;
+
+    /** */
+    float OverloadMissingTimer;
 
 
 };

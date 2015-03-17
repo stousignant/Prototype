@@ -27,7 +27,8 @@ APrototypeHUD::APrototypeHUD(const FObjectInitializer& ObjectInitializer) : Supe
     XPGainTimer = 0.0f;
     LevelUpTimer = 0.0f;
     bShowOverloadMissingXP = false;
-    OverloadMissingXPTimer = 0.0f;
+    bShowOverloadMissingCD = false;
+    OverloadMissingTimer = 0.0f;
 }
 
 void APrototypeHUD::DrawHUD()
@@ -106,6 +107,15 @@ void APrototypeHUD::DrawPlayerInfo()
         GetTextSize(PowerupDetectedCountString, PowerupDetectedCountStringSize.X, PowerupDetectedCountStringSize.Y, HUDFont);
         DrawText(PowerupDetectedCountString, FColor::Blue, (ScreenDimensions.X / RIGHTSIDE_X) - PowerupDetectedCountStringSize.X, (ScreenDimensions.Y / DOWNSIDE_Y) - PowerupDetectedCountStringSize.Y, HUDFont);
     }
+
+    // Print if crouch
+    if (MyCharacter->bIsCrouched)
+    {
+        FString CrouchString = FString::Printf(TEXT("Crouched"));
+        FVector2D CrouchStringSize;
+        GetTextSize(CrouchString, CrouchStringSize.X, CrouchStringSize.Y, HUDFont);
+        DrawText(CrouchString, FColor::Red, (ScreenDimensions.X / RIGHTSIDE_X) - CrouchStringSize.X, (ScreenDimensions.Y / DOWNSIDE_Y) - CrouchStringSize.Y * 2, HUDFont);
+    }
 }
 
 void APrototypeHUD::DrawPlayerPowers()
@@ -151,7 +161,7 @@ void APrototypeHUD::DrawPlayerPowers()
         FString LevelUpString = FString::Printf(TEXT("Level up!"));
         FVector2D LevelUpStringSize;
         GetTextSize(LevelUpString, LevelUpStringSize.X, LevelUpStringSize.Y, HUDFont);
-        DrawText(LevelUpString, FColor::Blue, (ScreenDimensions.X - LevelUpStringSize.X) / 2.0f, (ScreenDimensions.Y / DOWNSIDE_Y) + LevelUpStringSize.Y, HUDFont);
+        DrawText(LevelUpString, FColor::Blue, (ScreenDimensions.X - LevelUpStringSize.X) / 2.0f, (ScreenDimensions.Y / DOWNSIDE_Y), HUDFont);
 
         // Timer for 3 seconds
         LevelUpTimer++;
@@ -172,7 +182,7 @@ void APrototypeHUD::DrawPlayerPowers()
         GetTextSize(OverloadString, OverloadStringSize.X, OverloadStringSize.Y, HUDFont);
         DrawText(OverloadString, FColor::Yellow, (ScreenDimensions.X / LEFTSIDE_X), (ScreenDimensions.Y / DOWNSIDE_Y) - OverloadStringSize.Y * 4, HUDFont);
     }   
-    else if (MyCharacter->bOverloadOnCooldown)
+    else if (MyCharacter->OverloadCooldownTimer > 0.0f)
     {
         FString OverloadCooldownString = FString::Printf(TEXT("%02.0f:%02.0f"), floor(MyCharacter->OverloadCooldownTimer / 60.0f), fmod(MyCharacter->OverloadCooldownTimer, 60.0f));
         FVector2D OverloadCooldownStringSize;
@@ -181,21 +191,23 @@ void APrototypeHUD::DrawPlayerPowers()
     }
 
     // Print overload missing xp
-    if (bShowOverloadMissingXP)
+    if (bShowOverloadMissingXP || bShowOverloadMissingCD)
     {
-        FString OverloadMissingXPString = FString::Printf(TEXT("Not enough XP"));
-        FVector2D OverloadMissingXPStringSize;
-        GetTextSize(OverloadMissingXPString, OverloadMissingXPStringSize.X, OverloadMissingXPStringSize.Y, HUDFont);
-        DrawText(OverloadMissingXPString, FColor::Red, (ScreenDimensions.X / LEFTSIDE_X), (ScreenDimensions.Y / DOWNSIDE_Y) - OverloadMissingXPStringSize.Y * 5, HUDFont);
+        FString OverloadMissingString;
+        OverloadMissingString = (bShowOverloadMissingXP) ? FString::Printf(TEXT("Not enough XP")) : FString::Printf(TEXT("On Cooldown"));
+        FVector2D OverloadMissingStringSize;
+        GetTextSize(OverloadMissingString, OverloadMissingStringSize.X, OverloadMissingStringSize.Y, HUDFont);
+        DrawText(OverloadMissingString, FColor::Red, (ScreenDimensions.X / LEFTSIDE_X), (ScreenDimensions.Y / DOWNSIDE_Y) - OverloadMissingStringSize.Y * 5, HUDFont);
 
         // Timer for 3 seconds
-        OverloadMissingXPTimer++;
+        OverloadMissingTimer++;
 
         // Hide overload missing xp
-        if (OverloadMissingXPTimer >= 180.0f)
+        if (OverloadMissingTimer >= 180.0f)
         {
             bShowOverloadMissingXP = false;
-            OverloadMissingXPTimer = 0.0f;
+            bShowOverloadMissingCD = false;
+            OverloadMissingTimer = 0.0f;
         }
     }
 
@@ -237,7 +249,7 @@ void APrototypeHUD::DrawPlayerPowers()
         FString StatsCountString = FString::Printf(TEXT("%0.f new stat(s)"), MyCharacter->StatsCount);
         FVector2D StatsCountStringSize;
         GetTextSize(StatsCountString, StatsCountStringSize.X, StatsCountStringSize.Y, HUDFont);
-        DrawText(StatsCountString, ColorToDisplay, (ScreenDimensions.X / RIGHTSIDE_X) - StatsCountStringSize.X, (ScreenDimensions.Y / DOWNSIDE_Y), HUDFont);
+        DrawText(StatsCountString, FColor::Blue, (ScreenDimensions.X / RIGHTSIDE_X) - StatsCountStringSize.X, (ScreenDimensions.Y / DOWNSIDE_Y), HUDFont);
     }    
 }
 
@@ -248,14 +260,7 @@ void APrototypeHUD::DrawGameInfo()
     
     // Print the energy count
     FString EnergyCountString;
-    if (MyGameMode->GetCurrentState() == EPrototypePlayState::EEarlyGame || MyGameMode->GetCurrentState() == EPrototypePlayState::ETutorial)
-    {
-        EnergyCountString = FString::Printf(TEXT("%0.0f/%0.0f Energy absorbed"), MyGameMode->GetEnergyCount(), MyGameMode->EnergyMax);
-    }
-    else
-    {
-        EnergyCountString = FString::Printf(TEXT("%0.0f Energy absorbed"), MyGameMode->GetEnergyCount());
-    }
+    EnergyCountString = FString::Printf(TEXT("%0.0f/%0.0f Energy absorbed"), MyGameMode->GetEnergyCount(), MyGameMode->EnergyMax);
     FVector2D EnergyCountStringSize;
     GetTextSize(EnergyCountString, EnergyCountStringSize.X, EnergyCountStringSize.Y, HUDFont);
     DrawText(EnergyCountString, FColor::Cyan, (ScreenDimensions.X / RIGHTSIDE_X) - EnergyCountStringSize.X, (ScreenDimensions.Y / UPSIDE_Y), HUDFont);
@@ -300,7 +305,7 @@ void APrototypeHUD::DrawScan()
         GetTextSize(AbsorbEnergyString, AbsorbEnergySize.X, AbsorbEnergySize.Y, HUDFont);
         DrawText(AbsorbEnergyString, FColor::Cyan, (ScreenDimensions.X - AbsorbEnergySize.X) / 2.0f, (ScreenDimensions.Y - AbsorbEnergySize.Y) / 1.75f, HUDFont);
 
-        DrawRect(FColor::Cyan, (ScreenDimensions.X - MyCharacter->ScanProgress * 60.0f) / 2.0f, (ScreenDimensions.Y + 10) / 1.72f, MyCharacter->ScanProgress * 60.0f, 10);
+        DrawRect(FColor::Cyan, (ScreenDimensions.X - ((MyCharacter->ScanProgress / MyCharacter->AbsorbPowerTime) * 120.0f)) / 2.0f, (ScreenDimensions.Y + 10) / 1.72f, (MyCharacter->ScanProgress / MyCharacter->AbsorbPowerTime) * 120.0f, 10);
         
         float ScanPourcentage = (MyCharacter->ScanProgress / MyCharacter->AbsorbPowerTime) * 100;
         FString ScanProgressString = FString::Printf(TEXT("(%0.f%)"), ScanPourcentage);
@@ -347,25 +352,27 @@ void APrototypeHUD::DrawGameOver()
 
 void APrototypeHUD::DrawGameWon()
 {
+    //FString::Printf(TEXT(" "));// 
     // Print the Game won text
-    FVector2D GameWonSize;
-    GetTextSize(TEXT("MISSION SUCCESS!"), GameWonSize.X, GameWonSize.Y, HUDFont);
-    DrawText(TEXT("MISSION SUCCESS!"), FColor::Green, (ScreenDimensions.X - GameWonSize.X) / 2.0f, (ScreenDimensions.Y - GameWonSize.Y) / 2.0f, HUDFont);
+    FString GameWonString = MyGameMode->CurrentModeString + FString::Printf(TEXT(" CLEARED!"));
+    FVector2D GameWonStringSize;
+    GetTextSize(GameWonString, GameWonStringSize.X, GameWonStringSize.Y, HUDFont);
+    DrawText(GameWonString, FColor::Green, (ScreenDimensions.X - GameWonStringSize.X) / 2.0f, (ScreenDimensions.Y - GameWonStringSize.Y) / 2.0f, HUDFont);
 
     // Print the options
-    FString ContinueString = FString::Printf(TEXT("Continue mission (enter)"));
+    FString ContinueString = FString::Printf(TEXT("Continue on ")) + MyGameMode->NextModeString + FString::Printf(TEXT("(enter)"));
     FVector2D ContinueStringSize;
     GetTextSize(ContinueString, ContinueStringSize.X, ContinueStringSize.Y, HUDFont);
-    DrawText(ContinueString, FColor::Yellow, (ScreenDimensions.X - ContinueStringSize.X) / 2.0f, (ScreenDimensions.Y - ContinueStringSize.Y) / 2.0f + GameWonSize.Y, HUDFont);
+    DrawText(ContinueString, FColor::Yellow, (ScreenDimensions.X - ContinueStringSize.X) / 2.0f, (ScreenDimensions.Y - ContinueStringSize.Y) / 2.0f + GameWonStringSize.Y, HUDFont);
 
     FString RestartString = FString::Printf(TEXT("Restart mission (backspace)"));
     FVector2D RestartStringSize;
     GetTextSize(RestartString, RestartStringSize.X, RestartStringSize.Y, HUDFont);
-    DrawText(RestartString, FColor::Blue, (ScreenDimensions.X - RestartStringSize.X) / 2.0f, (ScreenDimensions.Y - RestartStringSize.Y) / 2.0f + GameWonSize.Y + ContinueStringSize.Y, HUDFont);
+    DrawText(RestartString, FColor::Blue, (ScreenDimensions.X - RestartStringSize.X) / 2.0f, (ScreenDimensions.Y - RestartStringSize.Y) / 2.0f + GameWonStringSize.Y + ContinueStringSize.Y, HUDFont);
 
     FString ExitString = FString::Printf(TEXT("Proceed to the evacuation (F4)"));
     FVector2D ExitStringSize;
     GetTextSize(ExitString, ExitStringSize.X, ExitStringSize.Y, HUDFont);
-    DrawText(ExitString, FColor::Blue, (ScreenDimensions.X - ExitStringSize.X) / 2.0f, (ScreenDimensions.Y - ExitStringSize.Y) / 2.0f + GameWonSize.Y + ContinueStringSize.Y + RestartStringSize.Y, HUDFont);
+    DrawText(ExitString, FColor::Blue, (ScreenDimensions.X - ExitStringSize.X) / 2.0f, (ScreenDimensions.Y - ExitStringSize.Y) / 2.0f + GameWonStringSize.Y + ContinueStringSize.Y + RestartStringSize.Y, HUDFont);
 }
 

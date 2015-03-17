@@ -21,7 +21,8 @@ public:
     // Character reference
     APrototypeCharacter* MyCharacter;
 
-    // Tutorial song
+    // - TUTORIAL -
+    /** Tutorial mode song */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
     class USoundBase* TutorialMusic;
 
@@ -29,21 +30,59 @@ public:
     UPROPERTY()
     UAudioComponent* TutorialMusicAC;
 
-    //
+    /** Function to play the tutorial mode music */
     void PlayTutorialMusic();
 
-    // Early Game song
+    // - NORMAL MODE -
+    /** Normal mode song */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
-    class USoundBase* EarlyGameMusic;
+    class USoundBase* NormalModeMusic;
 
     /** Used to manipulate with the early game music */
     UPROPERTY()
-    UAudioComponent* EarlyGameMusicAC;
+    UAudioComponent* NormalModeMusicAC;
 
-    //
-    void PlayEarlyGameMusic();
+    /** Function to play the normal mode music */
+    void PlayNormalModeMusic();
 
-    // Game over song
+    // - HARD MODE -
+    /** Hard mode song */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
+    class USoundBase* HardModeMusic;
+
+    /** Used to manipulate with the hard mode music */
+    UPROPERTY()
+    UAudioComponent* HardModeMusicAC;
+
+    /** Function to play the hard mode music */
+    void PlayHardModeMusic();
+
+    // - VERY HARD MODE -
+    /** Very hard mode song */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
+    class USoundBase* VeryHardModeMusic;
+
+    /** Used to manipulate with the very hard mode music */
+    UPROPERTY()
+    UAudioComponent* VeryHardModeMusicAC;
+
+    /** Function to play the very hard mode music */
+    void PlayVeryHardModeMusic();
+
+    // - ULTIMATE MODE -
+    /** Ultimate mode song */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
+    class USoundBase* UltimateModeMusic;
+
+    /** Used to manipulate with the ultimate mode music */
+    UPROPERTY()
+    UAudioComponent* UltimateModeMusicAC;
+
+    /** Function to play the ultimate mode music */
+    void PlayUltimateModeMusic();
+
+    // - GAME OVER -
+    /** Game over song */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
     class USoundBase* GameOverMusic;
 
@@ -51,10 +90,11 @@ public:
     UPROPERTY()
     UAudioComponent* GameOverMusicAC;
 
-    //
+    /** Function to play the game over music */
     void PlayGameOverMusic();
 
-    // Game won song
+    // - GAME WON -
+    /** Game won song */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
     class USoundBase* GameWonMusic;
 
@@ -62,19 +102,10 @@ public:
     UPROPERTY()
     UAudioComponent* GameWonMusicAC;
 
-    //
+    /** Function to play the game won music */
     void PlayGameWonMusic();
 
-    // Late Game song
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
-    class USoundBase* LateGameMusic;
-
-    /** Used to manipulate with the late game music */
-    UPROPERTY()
-    UAudioComponent* LateGameMusicAC;
-
-    //
-    void PlayLateGameMusic();
+    
 
     // Overload
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
@@ -89,15 +120,9 @@ public:
 
     // Play overload music
     void StopOverloadMusic();
-
-    //
-    bool bInterruptedEarlyGameMusic;
-
-    //
-    bool bInterruptedLateGameMusic;
-
-    //
-    //void StopAllMusic();
+    
+    // Stop the current music
+    void StopCurrentMusic();
 
     // Play a song
     //void PlayMusic(short NewState);
