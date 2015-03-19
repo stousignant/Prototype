@@ -32,19 +32,27 @@ public:
 
     /** Speed of the object spawned */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
-    float SpawnedSpeedLevel;
+    float SpawnSpeedLevel;
+
+    /** Speed increment */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
+    float SpawnSpeedIncrement;
     
     /** Minimal distance for object to be spawn between them */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
     float SpawnDistance;
 
-    /** Speed increment */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
-    float SpawnSpeedIncrement;
-
     /** Spawn distance increment */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
     float SpawnDistanceIncrement;
+
+    /** Experience points of the object spawned */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
+    float SpawnExperiencePoints;
+
+    /** Experience points increment */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Spawning)
+    float SpawnExperiencePointsIncrement;
 
     /** */
     bool bIsUltimateMode;
@@ -60,6 +68,9 @@ public:
 
     /** Handles the spawning of a new pickup */
     void SpawnPickup();    
+
+    /** */
+    bool bCanSpawn;
 
 
 private:

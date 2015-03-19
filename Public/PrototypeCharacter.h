@@ -162,6 +162,15 @@ public:
     /** Value for the cooldown duration */
     float OverloadCooldownDuration;
 
+    /** Value for the xp drain when overloaded */
+    float OverloadXPDrain;
+
+    /** Default value for the xp drain when overloaded */
+    float OverloadXPDrainDefault;
+
+    /** Time warp value for the xp drain when overloaded */
+    float OverloadXPDrainTimeWarp;
+
     /** */
     void StartOverload();
 
@@ -302,6 +311,27 @@ public:
 
     /** Player pressed the pause game key */
     void OnPauseGamePressed();
+
+    /** Player pressed the hack1 key */
+    void OnHack1Pressed();
+
+    /** Player pressed the hack2 key */
+    void OnHack2Pressed();
+
+    /** Player pressed the time warp action */
+    void OnTimeWarpPressed();
+
+    /** Player released the time warp action */
+    void OnTimeWarpReleased();
+
+    /** */
+    void StopTimeWarp();
+
+    /** If the player is currently pressing the time warp input */
+    bool bWantsToTimeWarp;
+
+    /** */
+    bool bIsTimeWarping;
     
     //////////////////////////////////////////////////////////////////////////
     // Base Movement Override
@@ -348,6 +378,14 @@ public:
     /** Used to manipulate with wind loop sound */
     UPROPERTY()
     UAudioComponent* WindAC;
+
+    /** Sound to play when we dash in overload */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
+    class USoundBase* OverloadDashSound;
+
+    /** Used to manipulate with dash loop sound */
+    UPROPERTY()
+    UAudioComponent* OverloadDashAC;
     
     /** Sound to play when the scan is completed */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
@@ -393,6 +431,14 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
     class USoundBase* LevelUpPickupSound;
 
+    /** Sound to play when time warping */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Sound)
+    class USoundBase* TimeWarpSound;
+
+    /** Used to manipulate with time warp loop sound */
+    UPROPERTY()
+    UAudioComponent* TimeWarpAC;
+
     /** Handles sounds for running */
     void UpdateRunSounds(bool bNewRunning);
 
@@ -407,6 +453,12 @@ public:
 
     /** Handles sounds for the wind */
     void UpdateSounds(UAudioComponent* SoundAC, bool bPlaySound);
+
+    /** Handles sounds for the time warp */
+    void UpdateTimeWarpSounds(bool bNewIsTimeWarping);
+
+    /** Handles sounds for the overload dash */
+    void UpdateOverloadDashSounds(bool bNewIsOverloadDashing);
 
 
     //////////////////////////////////////////////////////////////////////////
@@ -501,17 +553,8 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
     float ExperiencePoints;
 
-    /** Experience gained per energy */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
-    float ExperiencePerEnergy;
-
-    /** Experience gained from the first energy */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
-    float ExperienceDefault;
-
-    /** Experience increment */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Power)
-    float ExperienceIncrement;
+    /** */
+    float ExperiencePointsNewlyGained;
 
     /** */
     void LevelUp(bool bLeveledUpWithXP);    
@@ -581,6 +624,13 @@ public:
     /** Overload command */
     UFUNCTION(Exec)
     void Overload();
+
+    /** */
+    bool bCanHack;
+
+    /** */
+    float Hack1Ctr;
+    float Hack2Ctr;
 
     /** Is cheat for powerups on */
     bool bIsHackingPowerups;

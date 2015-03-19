@@ -45,7 +45,7 @@ void AEnergyPickup::Tick(float DeltaSeconds)
 {    
     FallSpeed = (SpeedLevel * DeltaSeconds * 60);
     SetActorLocation(GetActorLocation() - FVector(0, 0, FallSpeed/2));
-    SetActorRotation(GetActorRotation() + FRotator(0.0f, DeltaSeconds * 5, 0.0f));
+    SetActorRotation(GetActorRotation() + FRotator(0.0f, DeltaSeconds * FallSpeed / 4.0f, 0.0f));
 }
 
 void AEnergyPickup::Absorb()
@@ -65,6 +65,7 @@ void AEnergyPickup::Absorb()
     BeamMesh->SetHiddenInGame(true);
     BeamMesh->DestroyComponent();
     InvaderMesh->SetHiddenInGame(true);
+    InvaderMesh->DestroyComponent();
     SphereParticle->SetHiddenInGame(true);
     BeamParticle->SetHiddenInGame(true);
     bHasBeenPickedUp = true;
@@ -77,7 +78,7 @@ void AEnergyPickup::Explode()
 {
     // Destroy the energy
     Destroy();
-
+    
     // Spawn the next one
     APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
     MyGameMode->SpawnEnergyWithDelay();

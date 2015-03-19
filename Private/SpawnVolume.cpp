@@ -7,7 +7,8 @@
 
 // Difficulty caps
 const float SPAWN_DISTANCE_MAX = 25000.0f;
-const float SPAWN_SPEED_MAX = 50.0f; // 40.0f = 14 sec ou 80.0f = 14 sec en overload
+const float SPAWN_SPEED_MAX = 100.0f; // 40.0f = 14 sec ou 80.0f = 14 sec en overload
+const float SPAWN_EXPERIENCE_MAX = 100.f;
 // 50.0f = 11.2 sec ou 100.0f = 11.2 sec en overload
 
 ASpawnVolume::ASpawnVolume(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
@@ -19,19 +20,22 @@ ASpawnVolume::ASpawnVolume(const FObjectInitializer& ObjectInitializer) : Super(
     RootComponent = WhereToSpawn;
         
     // Set the default speed level for the spawning objects
-    SpawnedSpeedLevel = 5.0f;
-
-    // Set the default speed increment
+    SpawnSpeedLevel = 5.0f;
     SpawnSpeedIncrement = 0.5f;
     
     // Set the default spawn distance values
     SpawnDistance = 14000.0f;
     SpawnDistanceIncrement = 500.0f;
 
+    // Set the default spawn experience values
+    SpawnExperiencePoints = 15.0f;
+    SpawnExperiencePointsIncrement = 1.0f;
+
     // Set the default
     bIsFirstSpawn = true;
     bIsUltimateMode = false;
     bIsCharacterOverloaded = false;
+    bCanSpawn = true;
 
     // Make the SpawnVolume tickable
     PrimaryActorTick.bCanEverTick = false;
@@ -40,8 +44,8 @@ ASpawnVolume::ASpawnVolume(const FObjectInitializer& ObjectInitializer) : Super(
 void ASpawnVolume::SpawnPickup()
 {
     // If we have set something to spawn
-    if (WhatToSpawn != NULL)
-    {
+    if (WhatToSpawn != NULL && bCanSpawn)
+    {        
         // Check for a valid World
         UWorld* const World = GetWorld();
         if (World)
@@ -50,42 +54,47 @@ void ASpawnVolume::SpawnPickup()
             FActorSpawnParameters SpawnParams;
             SpawnParams.Owner = this;
             SpawnParams.Instigator = Instigator;
-
+            
             // Get a random location to spawn at
             FVector SpawnLocation = GetRandomPointInVolume();
-
+            
             // Get a rotation for the spawned item
             FRotator SpawnRotation;
             SpawnRotation.Yaw = 0.0f;
             SpawnRotation.Pitch = 0.0f;
             SpawnRotation.Roll = 0.0f;
-
+                        
             // Spawn the pickup
             APickup* const SpawnedPickup = World->SpawnActor<APickup>(WhatToSpawn, SpawnLocation, SpawnRotation, SpawnParams);
 
             AEnergyPickup* const SpawnedEnergy = Cast<AEnergyPickup>(SpawnedPickup);
+
+            // Setup all the stats of the energy
             if (SpawnedEnergy)
             {
                 // Check if speed is not over threshold
-                if (SpawnedSpeedLevel >= SPAWN_SPEED_MAX)
+                if (SpawnSpeedLevel >= SPAWN_SPEED_MAX)
                 {
-                    SpawnedSpeedLevel = SPAWN_SPEED_MAX;
+                    SpawnSpeedLevel = SPAWN_SPEED_MAX;
                 }
 
                 // Double speed if in ultimate mode
                 if (bIsUltimateMode)
                 {
-                    SpawnedSpeedLevel *= 2.0f;
+                    SpawnSpeedLevel *= 2.0f;
                 }
 
                 if (bIsCharacterOverloaded)
                 {
-                    SpawnedSpeedLevel /= 2.0f;
+                    SpawnSpeedLevel /= 2.0f;
                 }
 
                 // Attribute new speed
-                SpawnedEnergy->SpeedLevel = SpawnedSpeedLevel;
+                SpawnedEnergy->SpeedLevel = SpawnSpeedLevel;
 
+                // Attribute new xp
+                SpawnedEnergy->ExperiencePoints = (SpawnExperiencePoints >= SPAWN_EXPERIENCE_MAX) ? SPAWN_EXPERIENCE_MAX : SpawnExperiencePoints;
+                
                 // Check if distance is not over threshold
                 if (SpawnDistance >= SPAWN_DISTANCE_MAX)
                 {

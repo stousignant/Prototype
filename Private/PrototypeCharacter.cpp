@@ -14,6 +14,7 @@
 //GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("This is an on screen message!"));
 
 const int MAX_LEVEL = 15;
+const float MAX_EXPERIENCE = 100.0f;
 
 //////////////////////////////////////////////////////////////////////////
 // APrototypeCharacter
@@ -64,9 +65,7 @@ APrototypeCharacter::APrototypeCharacter(const FObjectInitializer& ObjectInitial
 
     // Set experience variables
     ExperiencePoints = 0.0f;
-    ExperienceDefault = 15.0f;
-    ExperiencePerEnergy = ExperienceDefault;
-    ExperienceIncrement = 1.0f;
+    ExperiencePointsNewlyGained = 0.0f;
 
     // Set default power values
     RunSpeed = SpeedPowerDefault;
@@ -80,6 +79,10 @@ APrototypeCharacter::APrototypeCharacter(const FObjectInitializer& ObjectInitial
     bIsOverloaded = false;
     OverloadCooldownDuration = 60.0f; // 1 min
     OverloadCooldownTimer = 0.0f;
+    OverloadXPDrainDefault = 5.0f; // 20secs for 100xp
+    OverloadXPDrain = OverloadXPDrainDefault;
+    OverloadXPDrainTimeWarp = 10.0f; // 10secs for 100xp with TimeWarp
+    bWantsToTimeWarp = false;
 
     // Set movement variables
     bIsRunning = false;
@@ -124,6 +127,9 @@ APrototypeCharacter::APrototypeCharacter(const FObjectInitializer& ObjectInitial
 
     // Pause variable
     bIsGamePaused = false;
+
+    // Hack variable
+    bCanHack = false;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -187,6 +193,12 @@ void APrototypeCharacter::UpdateDash(float DeltaSeconds)
     {
         // Add movement in that direction
         AddMovementInput(GetActorForwardVector(), 1.f);
+
+        UpdateOverloadDashSounds(!GetCharacterMovement()->IsFalling() && bIsOverloaded);
+    }
+    else
+    {
+        UpdateOverloadDashSounds(false);
     }
     
     // Entered high speed
@@ -409,17 +421,20 @@ void APrototypeCharacter::UpdateScan(float DeltaSeconds)
             APrototypeHUD* MyGameHUD = Cast<APrototypeHUD>(PlayerController->GetHUD());
 
             // Increment xp
-            ExperiencePoints += ExperiencePerEnergy;
-            ExperiencePerEnergy += ExperienceIncrement;
+            ExperiencePoints += TestEnergy->ExperiencePoints;
+            ExperiencePointsNewlyGained = TestEnergy->ExperiencePoints;
 
             // If leveled up
-            if (ExperiencePoints >= 100.0f)
+            if (ExperiencePoints >= MAX_EXPERIENCE)
             {
                 // If in overload
                 if (bIsOverloaded)
                 {
                     // Cap experience gain at 100.0f
-                    ExperiencePoints = 100.0f;
+                    ExperiencePoints = MAX_EXPERIENCE;
+
+                    // Still show xp gain
+                    MyGameHUD->bShowXPGain = true;
                 }
                 // If normal
                 else
@@ -431,11 +446,12 @@ void APrototypeCharacter::UpdateScan(float DeltaSeconds)
                     MyGameHUD->bShowLevelUp = true;
 
                     // Decrease xp if he didn't put his stat from leveling up
-                    ExperiencePoints -= 100.0f;
+                    ExperiencePoints -= MAX_EXPERIENCE;
                 }                            
             }
             else
             {
+                // show xp gain
                 MyGameHUD->bShowXPGain = true;
             }
 
@@ -523,21 +539,44 @@ void APrototypeCharacter::UpdateOverload(float DeltaSeconds)
 
     if (bIsOverloaded)
     {
+        if (bWantsToTimeWarp && !bIsTimeWarping)
+        {
+            bIsTimeWarping = true;
+
+            // Make current energypickup slower x2
+            TArray<AActor*> FoundEnergyPickupActors;
+
+            UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnergyPickup::StaticClass(), FoundEnergyPickupActors);
+
+            for (auto Actor : FoundEnergyPickupActors)
+            {
+                AEnergyPickup* EnergyActor = Cast<AEnergyPickup>(Actor);
+                // Slow its speed
+                EnergyActor->SpeedLevel /= 2.0f;
+            }
+
+            // Increase XP drain
+            OverloadXPDrain = OverloadXPDrainTimeWarp;
+
+            // Update time warp sounds
+            UpdateTimeWarpSounds(bIsTimeWarping);
+        }
+
         // Don't consume XP if hacking
         if (bIsHackingExperience)
         {
             return;
         }
 
-        if (ExperiencePoints - (DeltaSeconds * 5.0f) < 0.0f)
+        if (ExperiencePoints - (DeltaSeconds * OverloadXPDrain) < 0.0f)
         {
             EndOverload();
         }
         else
         {
-            // Decrease experience (100xp = 20secs)
-            ExperiencePoints -= DeltaSeconds * 5.0f;
-        }        
+            // Decrease experience
+            ExperiencePoints -= DeltaSeconds * OverloadXPDrain;
+        }
     }
 }
 
@@ -565,6 +604,9 @@ void APrototypeCharacter::SetupPlayerInputComponent(class UInputComponent* Input
     InputComponent->BindAction("Scan", IE_Pressed, this, &APrototypeCharacter::OnScanPressed);
     InputComponent->BindAction("Scan", IE_Released, this, &APrototypeCharacter::OnScanReleased);
 
+    InputComponent->BindAction("TimeWarp", IE_Pressed, this, &APrototypeCharacter::OnTimeWarpPressed);
+    InputComponent->BindAction("TimeWarp", IE_Released, this, &APrototypeCharacter::OnTimeWarpReleased);
+
     InputComponent->BindAction("UpgradePower1", IE_Pressed, this, &APrototypeCharacter::OnUpgradePower1Pressed);
     InputComponent->BindAction("UpgradePower2", IE_Pressed, this, &APrototypeCharacter::OnUpgradePower2Pressed);
     InputComponent->BindAction("UpgradePower3", IE_Pressed, this, &APrototypeCharacter::OnUpgradePower3Pressed);
@@ -575,6 +617,9 @@ void APrototypeCharacter::SetupPlayerInputComponent(class UInputComponent* Input
     InputComponent->BindAction("ContinueGame", IE_Pressed, this, &APrototypeCharacter::OnContinueGamePressed);
     FInputActionBinding& PauseToggle = InputComponent->BindAction("PauseGame", IE_Pressed, this, &APrototypeCharacter::OnPauseGamePressed);
     PauseToggle.bExecuteWhenPaused = true;
+
+    InputComponent->BindAction("Hack1", IE_Pressed, this, &APrototypeCharacter::OnHack1Pressed);
+    InputComponent->BindAction("Hack2", IE_Pressed, this, &APrototypeCharacter::OnHack2Pressed);
 	
 	InputComponent->BindAxis("MoveForward", this, &APrototypeCharacter::OnMoveForward);
 	InputComponent->BindAxis("MoveRight", this, &APrototypeCharacter::OnMoveRight);
@@ -872,6 +917,41 @@ void APrototypeCharacter::OnScanReleased()
     bWantsToScan = false;
 }
 
+void APrototypeCharacter::OnTimeWarpPressed()
+{
+    bWantsToTimeWarp = true;
+}
+
+void APrototypeCharacter::OnTimeWarpReleased()
+{
+    if (bIsTimeWarping)
+    {
+        StopTimeWarp();
+    }    
+}
+
+void APrototypeCharacter::StopTimeWarp()
+{
+    // Reset Time warp variables
+    bWantsToTimeWarp = false;
+    bIsTimeWarping = false;
+    OverloadXPDrain = OverloadXPDrainDefault;
+
+    // Make current energypickup speed back to normal
+    TArray<AActor*> FoundEnergyPickupActors;
+
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnergyPickup::StaticClass(), FoundEnergyPickupActors);
+
+    for (auto Actor : FoundEnergyPickupActors)
+    {
+        AEnergyPickup* EnergyActor = Cast<AEnergyPickup>(Actor);
+        // Normal its speed
+        EnergyActor->SpeedLevel *= 2.0f;
+    }
+
+    UpdateTimeWarpSounds(bIsTimeWarping);
+}
+
 void APrototypeCharacter::OnUpgradePower1Pressed()
 {
     UpgradePower(SpeedPowerLevel);
@@ -934,19 +1014,26 @@ void APrototypeCharacter::UpdateAbsorbPower()
 void APrototypeCharacter::UpgradePower(float &PowerId, bool bIsNormal)
 {
     int MaximumLevelForPower = (bIsNormal) ? MAX_LEVEL : MAX_LEVEL / 3;
-
-    if (StatsCount > 0 && PowerId < MaximumLevelForPower)
+    
+    if (StatsCount > 0)
     {
-        // Level up stat
-        PowerId++;
+        int OverloadedPowerCap = (bIsNormal) ? 3 : 1;
+        MaximumLevelForPower = (bIsOverloaded) ? MaximumLevelForPower + OverloadedPowerCap : MaximumLevelForPower;
 
-        // Reduce stat available
-        StatsCount--;
+        if (PowerId < MaximumLevelForPower)
+        {
+            // Level up stat
+            PowerId++;
 
-        // Play upgrade sound
-        UGameplayStatics::PlaySoundAtLocation(this, PowerUpgradeSound, GetActorLocation());
+            // Reduce stat available
+            StatsCount--;
+
+            // Play upgrade sound
+            UGameplayStatics::PlaySoundAtLocation(this, PowerUpgradeSound, GetActorLocation());
+        }        
     }
-    else if (bIsHackingPowerups)
+    
+    if (bIsHackingPowerups)
     {
         // Level up stat or set it to 1 if over maximum x2
         PowerId = (PowerId < MaximumLevelForPower * 2) ? PowerId + 1 : PowerId = 1;
@@ -976,9 +1063,16 @@ void APrototypeCharacter::OnContinueGamePressed()
 
 void APrototypeCharacter::OnPauseGamePressed()
 {
+    // Toggle pause bool
+    bIsGamePaused = !bIsGamePaused;
+
+    // Get HUD
+    APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this, 0);
+    APrototypeHUD* MyGameHUD = Cast<APrototypeHUD>(PlayerController->GetHUD());
+    MyGameHUD->bShowPause = bIsGamePaused;
+
     APlayerController* const MyPlayer = Cast<APlayerController>(GEngine->GetFirstLocalPlayerController(GetWorld()));
-    MyPlayer->SetPause(!bIsGamePaused);
-    bIsGamePaused = !bIsGamePaused; 
+    MyPlayer->SetPause(bIsGamePaused);    
 }
 
 void APrototypeCharacter::MissingStamina()
@@ -1067,6 +1161,9 @@ void APrototypeCharacter::EndOverload()
     bOverloadEnded = true;
     OverloadCooldownTimer = OverloadCooldownDuration;
 
+    // Reset Time warp
+    StopTimeWarp();
+
     // Deupgrade -3/-1
     SpeedPowerLevel -= 3;
     JumpPowerLevel -= 3;
@@ -1091,7 +1188,7 @@ void APrototypeCharacter::EndOverload()
     {
         AEnergyPickup* EnergyActor = Cast<AEnergyPickup>(Actor);
         // Slow its speed
-        EnergyActor->SpeedLevel *= 2;
+        EnergyActor->SpeedLevel *= 2.0f;
     }
 
     // Make spawn volume spawn slower
@@ -1103,34 +1200,108 @@ void APrototypeCharacter::EndOverload()
     for (auto Actor : FoundSpawnVolumeActors)
     {
         ASpawnVolume* SpawnVolumeActor = Cast<ASpawnVolume>(Actor);
-        SpawnVolumeActor->SpawnedSpeedLevel *= 2;
+        SpawnVolumeActor->bIsCharacterOverloaded = false;
     }
 }
 
+void APrototypeCharacter::OnHack1Pressed()
+{
+    if (bCanHack)
+    {
+        Hack1Ctr--;
+        if (Hack1Ctr < 0)
+        {
+            Hack1Ctr = 0;
+        }
+
+        if (Hack2Ctr == 0)
+        {
+            bCanHack = false;
+            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, TEXT("System locked"));
+        }        
+    }
+    else if (!bCanHack)
+    {
+        Hack1Ctr++;
+        if (Hack1Ctr > 1)
+        {
+            Hack1Ctr = 1;
+        }
+
+        if (Hack2Ctr == 2)
+        {
+            bCanHack = true;
+            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, TEXT("System unlocked"));
+        }
+    }
+}
+
+void APrototypeCharacter::OnHack2Pressed()
+{
+    if (bCanHack)
+    {
+        Hack2Ctr--;
+        if (Hack2Ctr < 0)
+        {
+            Hack2Ctr = 0;
+        }
+
+        if (Hack1Ctr == 0 && Hack2Ctr == 0)
+        {
+            bCanHack = false;
+            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, TEXT("System locked"));
+        }
+    }
+    else if (!bCanHack)
+    {
+        Hack2Ctr++;
+        if (Hack2Ctr > 2)
+        {
+            Hack1Ctr = 2;
+        }
+
+        if (Hack2Ctr == 2 && Hack1Ctr == 1)
+        {
+            bCanHack = true;
+            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, TEXT("System unlocked"));
+        }
+    }
+}
+
+
 void APrototypeCharacter::System0731()
 {
+    if (!bCanHack){ return; }
+
     bIsHackingPowerups = !bIsHackingPowerups;
 
-    // Upgrade all to double max
-    SpeedPowerLevel = MAX_LEVEL * 2 - 1;
-    JumpPowerLevel = MAX_LEVEL * 2 - 1;
-    StaminaPowerLevel = MAX_LEVEL * 2 - 1;
-    AbsorbPowerLevel = (MAX_LEVEL / 3.0f) * 2 - 1;
+    if (bIsHackingPowerups)
+    {
+        // Upgrade all to double max
+        SpeedPowerLevel = MAX_LEVEL * 2 - 1;
+        JumpPowerLevel = MAX_LEVEL * 2 - 1;
+        StaminaPowerLevel = MAX_LEVEL * 2 - 1;
+        AbsorbPowerLevel = (MAX_LEVEL / 3.0f) * 2 - 1;
 
-    OnUpgradePower1Pressed();
-    OnUpgradePower2Pressed();
-    OnUpgradePower3Pressed();
-    OnUpgradePower4Pressed();
+        OnUpgradePower1Pressed();
+        OnUpgradePower2Pressed();
+        OnUpgradePower3Pressed();
+        OnUpgradePower4Pressed();
+    }    
 }
 
 void APrototypeCharacter::System0732()
 {
-    ExperiencePoints += 99.0f;
+    if (!bCanHack){ return; }
+
+    ExperiencePoints = MAX_EXPERIENCE;
     bIsHackingExperience = !bIsHackingExperience;
 }
 
 void APrototypeCharacter::System0733()
 {
+    if (!bCanHack){ return; }
+
     // Get game mode
     APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
     MyGameMode->SetExplosionCount(-1000.0f);
@@ -1138,6 +1309,8 @@ void APrototypeCharacter::System0733()
 
 void APrototypeCharacter::System0734()
 {
+    if (!bCanHack){ return; }
+
     // Get game mode
     APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
     MyGameMode->IncrementEnergy(5);    
@@ -1145,6 +1318,8 @@ void APrototypeCharacter::System0734()
 
 void APrototypeCharacter::System0735()
 {
+    if (!bCanHack){ return; }
+
     // Get game mode
     APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
     MyGameMode->IncrementEnergy(15);
@@ -1152,6 +1327,8 @@ void APrototypeCharacter::System0735()
 
 void APrototypeCharacter::System0736()
 {
+    if (!bCanHack){ return; }
+
     // Get game mode
     APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
     MyGameMode->IncrementEnergy(30);
@@ -1159,6 +1336,8 @@ void APrototypeCharacter::System0736()
 
 void APrototypeCharacter::System0737()
 {
+    if (!bCanHack){ return; }
+
     // Get game mode
     APrototypeGameMode* MyGameMode = Cast<APrototypeGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
     MyGameMode->IncrementEnergy(50);
@@ -1343,6 +1522,62 @@ void APrototypeCharacter::UpdateSlideSounds(bool bNewIsSliding)
         if (SlideAC)
         {
             SlideAC->Stop();
+        }
+    }
+}
+
+void APrototypeCharacter::UpdateTimeWarpSounds(bool bNewIsTimeWarping)
+{
+    if (bNewIsTimeWarping)
+    {
+        // If the time warp audio component isn't created yet
+        if (!TimeWarpAC && TimeWarpSound)
+        {
+            // Initialize the run audio component
+            TimeWarpAC = UGameplayStatics::PlaySoundAttached(TimeWarpSound, GetRootComponent());
+            if (TimeWarpAC)
+            {
+                TimeWarpAC->bAutoDestroy = false;
+            }
+        }
+        else if (TimeWarpAC && !TimeWarpAC->IsPlaying())
+        {
+            TimeWarpAC->Play();
+        }
+    }
+    else
+    {
+        if (TimeWarpAC)
+        {
+            TimeWarpAC->Stop();
+        }
+    }
+}
+
+void APrototypeCharacter::UpdateOverloadDashSounds(bool bNewIsOverloadDashing)
+{
+    if (bNewIsOverloadDashing)
+    {
+        // If the time warp audio component isn't created yet
+        if (!OverloadDashAC && OverloadDashSound)
+        {
+            // Initialize the run audio component
+            OverloadDashAC = UGameplayStatics::PlaySoundAttached(OverloadDashSound, GetRootComponent());
+            if (OverloadDashAC)
+            {
+                OverloadDashAC->bAutoDestroy = false;
+            }
+        }
+        else if (OverloadDashAC && !OverloadDashAC->IsPlaying())
+        {
+            OverloadDashAC->Play();
+        }
+    }
+    else
+    {
+        if (OverloadDashAC)
+        {
+            OverloadDashAC->Stop();
         }
     }
 }

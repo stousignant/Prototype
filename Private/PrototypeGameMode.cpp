@@ -141,9 +141,7 @@ void APrototypeGameMode::IncrementEnergy(int value)
 {
     EnergyCount += value;
 
-    // Increase difficulty
-    SpawnVolumeActor->SpawnedSpeedLevel = SpawnVolumeActor->SpawnedSpeedLevel + (SpawnVolumeActor->SpawnSpeedIncrement * value);
-    SpawnVolumeActor->SpawnDistance = SpawnVolumeActor->SpawnDistance + (SpawnVolumeActor->SpawnDistanceIncrement * value);
+    IncreaseSpawnStats(value);
 
     // Check if game won
     if (EnergyCount >= EnergyMax)
@@ -166,10 +164,6 @@ void APrototypeGameMode::SetExplosionCount(float value)
 void APrototypeGameMode::IncrementExplosion(int value)
 {
     ExplosionCount += value;
-
-    // Increase difficulty
-    SpawnVolumeActor->SpawnedSpeedLevel = SpawnVolumeActor->SpawnedSpeedLevel + (SpawnVolumeActor->SpawnSpeedIncrement * value);
-    SpawnVolumeActor->SpawnDistance = SpawnVolumeActor->SpawnDistance + (SpawnVolumeActor->SpawnDistanceIncrement * value);
     
     // Check if game over
     if (ExplosionCount >= ExplosionMax)
@@ -182,6 +176,19 @@ void APrototypeGameMode::IncrementExplosion(int value)
         // Show warning for planet life loss 3 seconds
         ExplosionWarningTimer = 3.0f;
     }
+}
+
+void APrototypeGameMode::IncreaseSpawnStats(float value)
+{
+    // Increase difficulty
+    SpawnVolumeActor->SpawnSpeedLevel = SpawnVolumeActor->SpawnSpeedLevel + (SpawnVolumeActor->SpawnSpeedIncrement * value);
+    SpawnVolumeActor->SpawnDistance = SpawnVolumeActor->SpawnDistance + (SpawnVolumeActor->SpawnDistanceIncrement * value);
+    SpawnVolumeActor->SpawnExperiencePoints = SpawnVolumeActor->SpawnExperiencePoints + (SpawnVolumeActor->SpawnExperiencePointsIncrement * value);
+
+    // DEBUG
+    //GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("SpawnVolumeActor->SpawnSpeedLevel (%f)"), SpawnVolumeActor->SpawnSpeedLevel));
+    //GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("SpawnVolumeActor->SpawnDistance (%f)"), SpawnVolumeActor->SpawnDistance));
+    //GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("SpawnVolumeActor->SpawnExperiencePoints (%f)"), SpawnVolumeActor->SpawnExperiencePoints));
 }
 
 void APrototypeGameMode::SetCurrentState(EPrototypePlayState NewState)
@@ -207,6 +214,10 @@ void APrototypeGameMode::SetNextState()
     else if (EnergyMax == VERYHARD_MODE)
     {
         SetCurrentState(EPrototypePlayState::EUltimateMode);
+    }
+    else if (EnergyMax == ULTIMATE_MODE)
+    {
+        SetCurrentState(EPrototypePlayState::EGameClear);
     }
 }
 
@@ -283,17 +294,25 @@ void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
         APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
         MyCharacter->bMovementBlocked = false;
 
+        // Free xp for overload
+        MyCharacter->OverloadCooldownTimer = 0.0f;
+        MyCharacter->ExperiencePoints = 99.0f;
+
         // Play late game music
         MusicPlayerActor->PlayUltimateModeMusic();
 
         // Current mode string
         CurrentModeString = FString(TEXT("ULTIMATE MODE"));
+        NextModeString = FString(TEXT("HACKED MODE"));
 
         // Energy max
         EnergyMax = ULTIMATE_MODE;
 
         // Increase difficulty
         SpawnVolumeActor->bIsUltimateMode = true;
+
+        // Increase difficulty
+        SpawnVolumeActor->SpawnSpeedIncrement = 0.5f;
     }
     break;
     //
@@ -330,6 +349,29 @@ void APrototypeGameMode::HandleNewState(EPrototypePlayState NewState)
         MusicPlayerActor->PlayGameWonMusic();
     }
     break;    
+    //
+    case EPrototypePlayState::EGameClear:
+    {
+        // Get the character and unblock mouvement
+        APrototypeCharacter* MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+        MyCharacter->bMovementBlocked = false;
+
+        // UNLIMITED GAMEPLAY
+        MyCharacter->bCanHack = true;
+        MyCharacter->System0731();
+        MyCharacter->System0732();
+        MyCharacter->System0733();
+
+        // Energy max
+        EnergyMax = ULTIMATE_MODE * 100.0f;
+
+        // Play game clear music
+        MusicPlayerActor->PlayGameClearMusic();
+
+        //
+        SpawnVolumeActor->bCanSpawn = false;
+    }
+    break;
     // 
     case EPrototypePlayState::EUnknown:
     {
@@ -353,7 +395,7 @@ void APrototypeGameMode::BeginPlay()
 
 void APrototypeGameMode::SpawnEnergyWithDelay()
 {
-    // Spawn pickup after a 3 second delay
+    // Spawn pickup after a 1 second delay
     FTimerHandle UniqueHandle;
     FTimerDelegate TimerDelegate = FTimerDelegate::CreateUObject(this, &APrototypeGameMode::SpawnEnergy);
     GetWorldTimerManager().SetTimer(UniqueHandle, TimerDelegate, 1.f, false);    
@@ -361,5 +403,8 @@ void APrototypeGameMode::SpawnEnergyWithDelay()
 
 void APrototypeGameMode::SpawnEnergy()
 {
-    SpawnVolumeActor->SpawnPickup();
+    if (SpawnVolumeActor && bIsSpawnVolumeSet)
+    {
+        SpawnVolumeActor->SpawnPickup();
+    }    
 }

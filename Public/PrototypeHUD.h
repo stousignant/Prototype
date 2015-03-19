@@ -68,6 +68,9 @@ public:
     /** */
     float OverloadMissingTimer;
 
+    /** */
+    bool bShowPause;
+
 
 };
 

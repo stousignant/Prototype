@@ -57,6 +57,9 @@ public:
     //
     bool bHasBeenPickedUp;
 
+    //
+    float ExperiencePoints;
+
     /** Explosion particle effect */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Particle)
     UParticleSystem* ExplosionEffect;

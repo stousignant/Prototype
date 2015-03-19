@@ -128,6 +128,26 @@ void AMusicPlayer::PlayGameWonMusic()
     }
 }
 
+void AMusicPlayer::PlayGameClearMusic()
+{
+    // Stop last music
+    if (GameWonMusicAC && GameWonMusicAC->IsPlaying())
+    {
+        GameWonMusicAC->Stop();
+    }
+
+    // Get the character
+    MyCharacter = Cast<APrototypeCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
+
+    //
+    GameClearMusicAC = UGameplayStatics::PlaySoundAttached(GameClearMusic, MyCharacter->GetRootComponent());
+    GameClearMusicAC->bAutoDestroy = false;
+    if (GameClearMusicAC)
+    {
+        GameClearMusicAC->Play();
+    }
+}
+
 void AMusicPlayer::PlayOverloadMusic()
 {
     // Interrupt current music
@@ -150,6 +170,11 @@ void AMusicPlayer::PlayOverloadMusic()
     {
         // Fade out
         UltimateModeMusicAC->AdjustVolume(2.0f, 0.0f);
+    }
+    else if (GameClearMusicAC && GameClearMusicAC->IsPlaying())
+    {
+        // Fade out
+        GameClearMusicAC->AdjustVolume(2.0f, 0.0f);
     }
 
     // Get the character

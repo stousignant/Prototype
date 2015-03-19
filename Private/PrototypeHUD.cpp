@@ -29,6 +29,7 @@ APrototypeHUD::APrototypeHUD(const FObjectInitializer& ObjectInitializer) : Supe
     bShowOverloadMissingXP = false;
     bShowOverloadMissingCD = false;
     OverloadMissingTimer = 0.0f;
+    bShowPause = false;
 }
 
 void APrototypeHUD::DrawHUD()
@@ -93,7 +94,7 @@ void APrototypeHUD::DrawPlayerInfo()
     // Print respawn
     if (MyCharacter->bIsDead)
     {
-        FString RespawnString = FString::Printf(TEXT("Respawning"));
+        FString RespawnString = FString::Printf(TEXT("Teleporting"));
         FVector2D RespawnStringSize;
         GetTextSize(RespawnString, RespawnStringSize.X, RespawnStringSize.Y, HUDFont);
         DrawText(RespawnString, FColor::Cyan, (ScreenDimensions.X - RespawnStringSize.X) / 2.0f, (ScreenDimensions.Y - RespawnStringSize.Y) / 2.45f, HUDFont);
@@ -134,12 +135,13 @@ void APrototypeHUD::DrawPlayerPowers()
     GetTextSize(ExperiencePointsString, ExperiencePointsStringSize.X, ExperiencePointsStringSize.Y, HUDFont);
     DrawText(ExperiencePointsString, FColor::Cyan, (ScreenDimensions.X / LEFTSIDE_X), (ScreenDimensions.Y / DOWNSIDE_Y) + ExperiencePointsStringSize.Y, HUDFont);
     FColor XPBarColorToDisplay = (MyCharacter->bIsOverloaded) ? FColor::Red : FColor::Cyan;
+    XPBarColorToDisplay = (MyCharacter->bIsTimeWarping) ? FColor::White : XPBarColorToDisplay;
     DrawRect(XPBarColorToDisplay, (ScreenDimensions.X / LEFTSIDE_X) + ExperiencePointsStringSize.X + 5, (ScreenDimensions.Y / DOWNSIDE_Y) + ExperiencePointsStringSize.Y + 7, (ScreenDimensions.X / 263) * MyCharacter->ExperiencePoints, 10);
 
     // Print xp gain
     if (bShowXPGain)
     {
-        FString XPGainString = FString::Printf(TEXT("+%0.0f Energy XP"), MyCharacter->ExperiencePerEnergy - MyCharacter->ExperienceIncrement);
+        FString XPGainString = FString::Printf(TEXT("+%0.0f Energy XP"), MyCharacter->ExperiencePointsNewlyGained);
         FVector2D XPGainStringSize;
         GetTextSize(XPGainString, XPGainStringSize.X, XPGainStringSize.Y, HUDFont);
         DrawText(XPGainString, FColor::Cyan, (ScreenDimensions.X - XPGainStringSize.X) / 2.0f, (ScreenDimensions.Y / DOWNSIDE_Y), HUDFont);
@@ -289,6 +291,14 @@ void APrototypeHUD::DrawGameInfo()
         GetTextSize(PlanetLifeLossString, PlanetLifeLossStringSize.X, PlanetLifeLossStringSize.Y, HUDFont);
         DrawText(PlanetLifeLossString, FColor::Red, (ScreenDimensions.X - PlanetLifeLossStringSize.X) / 2.0f, (ScreenDimensions.Y - PlanetLifeLossStringSize.Y) / 2.3f + WarningStringSize.Y, HUDFont);
     }
+
+    if (bShowPause)
+    {
+        FString PauseString = FString::Printf(TEXT("----------TIME STOP----------"));
+        FVector2D PauseStringSize;
+        GetTextSize(PauseString, PauseStringSize.X, PauseStringSize.Y, HUDFont);
+        DrawText(PauseString, FColor::Cyan, (ScreenDimensions.X - PauseStringSize.X) / 2.0f, (ScreenDimensions.Y - PauseStringSize.Y) / 2.0f, HUDFont);
+    }
 }
 
 void APrototypeHUD::DrawScan()
@@ -316,7 +326,6 @@ void APrototypeHUD::DrawScan()
 
     if (MyCharacter->bWantsToScan && MyCharacter->ScanDistance > 0.0f)
     {
-        //MyCharacter->AbsorbPowerDistance / 500.0f
         // Absorb distance
         FString AbsorbDistanceString = FString::Printf(TEXT("[%0.fm]"), MyCharacter->ScanDistance);
         FVector2D AbsorbDistanceStringSize;
@@ -352,7 +361,6 @@ void APrototypeHUD::DrawGameOver()
 
 void APrototypeHUD::DrawGameWon()
 {
-    //FString::Printf(TEXT(" "));// 
     // Print the Game won text
     FString GameWonString = MyGameMode->CurrentModeString + FString::Printf(TEXT(" CLEARED!"));
     FVector2D GameWonStringSize;
@@ -373,6 +381,7 @@ void APrototypeHUD::DrawGameWon()
     FString ExitString = FString::Printf(TEXT("Proceed to the evacuation (F4)"));
     FVector2D ExitStringSize;
     GetTextSize(ExitString, ExitStringSize.X, ExitStringSize.Y, HUDFont);
-    DrawText(ExitString, FColor::Blue, (ScreenDimensions.X - ExitStringSize.X) / 2.0f, (ScreenDimensions.Y - ExitStringSize.Y) / 2.0f + GameWonStringSize.Y + ContinueStringSize.Y + RestartStringSize.Y, HUDFont);
+    DrawText(ExitString, FColor::Blue, (ScreenDimensions.X - ExitStringSize.X) / 2.0f, (ScreenDimensions.Y - ExitStringSize.Y) / 2.0f + GameWonStringSize.Y + ContinueStringSize.Y + RestartStringSize.Y, HUDFont); 
 }
+
 

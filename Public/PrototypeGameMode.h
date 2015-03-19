@@ -15,7 +15,8 @@ enum class EPrototypePlayState : short
     EVeryHardMode,
     EUltimateMode,
     EGameOver,
-    EGameWon
+    EGameWon,
+    EGameClear
 };
 
 UCLASS(minimalapi)
@@ -129,6 +130,9 @@ private:
 
     /** Amount of energy exploded by hitting the deathfloor */
     float ExplosionCount;
+
+    /** Increase stats of spawn */
+    void IncreaseSpawnStats(float value);
 
 };
 

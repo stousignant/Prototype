@@ -105,6 +105,18 @@ public:
     /** Function to play the game won music */
     void PlayGameWonMusic();
 
+    // - GAME CLEAR -
+    /** Game clear song */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Music)
+    class USoundBase* GameClearMusic;
+
+    /** Used to manipulate with the game clear music */
+    UPROPERTY()
+    UAudioComponent* GameClearMusicAC;
+
+    /** Function to play the game clear music */
+    void PlayGameClearMusic();
+
     
 
     // Overload
